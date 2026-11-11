@@ -1,7 +1,6 @@
 {
   "base": "Geant4 11.4.0",
   "base_url": "https://gitlab.cern.ch/geant4/geant4/-/tree/v11.4.0",
-  "source_snapshot": "Dirac-20261101-parallel-reset-20261103",
   "normalization": "Patch uses LF; source_changes preserves original bytes.",
   "files": [
     {

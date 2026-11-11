@@ -241,14 +241,14 @@ def main():
     started = time.monotonic()
     config = {'Z_min':args.z_min,'Z_max':args.z_max,'energy_MeV_u':[30.,2000.],
               'N':[0,27],'normalization_relative_tolerance':args.normalization_tolerance}
-    emit({'phase':'read_inputs','output':str(out),**config})
+    emit({'phase':'read_inputs',**config})
     dirac = DiracArchive(args.dirac)
     g = read_global(args.global_csv,args.z_min,args.z_max,progress=emit)
     atima = read_atima(args.atima_splines,g.projectile_z,g.target_z,progress=emit)
-    sources = {'dirac':{'path':str(args.dirac.resolve()),'bytes':args.dirac.stat().st_size},
-               'GLOBAL':{'path':g.source_path,'bytes':g.source_bytes,
+    sources = {'dirac':{'path':args.dirac.name,'bytes':args.dirac.stat().st_size},
+               'GLOBAL':{'path':args.global_csv.name,'bytes':g.source_bytes,
                          'source_rows':g.source_rows,'selected_rows':g.selected_rows,'source_runs':g.source_runs},
-               'ATIMA':{'path':atima.source_path,'bytes':atima.source_bytes,
+               'ATIMA':{'path':args.atima_splines.name,'bytes':atima.source_bytes,
                         'archive_members':atima.source_members,'selected_element_members':len(atima)}}
     previous_path = out/'manifest.json'
     if previous_path.exists():
@@ -268,8 +268,7 @@ def main():
                 'interpolation':{'GLOBAL':'log sigma vs log E; stationary p solved after rate interpolation',
                                  'delta_within_T':'positive piecewise power law, exact analytic cell moments',
                                  'delta_between_E':'linear mixture in log E after affine mapping u=(T-0.001)/(Tmax(E)-0.001), including Jacobian',
-                                 'stopping':'Per-target ragged grids. Linear B vs log E from lower-node right value to upper-node left value; exact nodes use right value. S_N=B*q_N^2+Zt*M1_N; S_full contains right node values, not an independent interpolation law.'},
-                'Geant4_integration':'Prepared data only. The installed Geant4 has not been changed and cannot yet read this new format.'}
+                                 'stopping':'Per-target ragged grids. Linear B vs log E from lower-node right value to upper-node left value; exact nodes use right value. S_N=B*q_N^2+Zt*M1_N; S_full contains right node values, not an independent interpolation law.'}}
     save_json(out/'manifest.json',manifest)
     atima_records = []
     for (zp,zt), s in sorted(atima.items()):

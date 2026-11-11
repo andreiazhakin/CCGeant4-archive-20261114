@@ -2,6 +2,5 @@
   "passed": true,
   "checked_utc": "2026-11-03T19:20:04.033829+00:00",
   "source_files": 17699,
-  "local_links_checked": 167,
-  "installed_reference_build": "Dirac-20261101-parallel-reset-20261103"
+  "local_links_checked": 167
 }

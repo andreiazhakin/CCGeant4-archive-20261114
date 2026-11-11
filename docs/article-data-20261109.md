@@ -32,7 +32,7 @@ The archive includes:
 - The recorded performance measurements, run configurations and analysis
   scripts. Timing records describe the measured machine and build.
 
-`MANIFEST.json` lists each payload file, its purpose, original location and size. `plot_commands.json` maps manuscript figure labels to scripts,
+`MANIFEST.json` lists each payload file, its purpose and size. `plot_commands.json` maps manuscript figure labels to scripts,
 arguments, inputs and outputs. The `workspace/` tree preserves paths within the
 original calculation workspace. `external/` holds the numerical records that
 were stored elsewhere, including the companion xenon analysis. Journal PDFs,
@@ -51,7 +51,7 @@ python archive_tools.py plots
 ```
 
 The original records are kept unchanged. `prepare` creates a separate copy and
-updates the original local paths for that copy. Choose a new destination outside
+resolves the archive paths in that copy. Choose a new destination outside
 the extracted archive. The plot commands analyze recorded events or use the
 saved numerical summaries; they do not launch transport simulations. Generated
 files remain in the replay copy, with command logs and `replay_report.json`.

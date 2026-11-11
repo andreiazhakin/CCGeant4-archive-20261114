@@ -168,7 +168,7 @@ class GlobalData:
 
 def read_global(path: str | Path, zmin: int = 29, zmax: int = 92,
                 *, progress: Callable | None = None) -> GlobalData:
-    """Read and fingerprint a complete GLOBAL CSV without assuming target count.
+    """Read a complete GLOBAL CSV without assuming a fixed number of targets.
 
     The selected Z interval must be rectangular in target and energy coverage.
     Each group must contain the 106 distinct +/-1,+/-2 transitions within

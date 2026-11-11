@@ -1,0 +1,84 @@
+{
+  "role": "Input files for the transport example",
+  "Zp": [
+    29,
+    54,
+    92
+  ],
+  "Zt": [
+    1,
+    8,
+    14
+  ],
+  "delta_native_Nmax": "10 for Z29; 15 for Z54 and Z92; runtime continuation through N27",
+  "files": [
+    {
+      "source": "Z029.csv",
+      "file": "delta/Z029.csv",
+      "bytes": 20169221,
+      "selected_rows": null,
+      "archive": "data/delta/Z029.csv.xz",
+      "origin": "Computed frozen-shell electron spectra, converted to runtime CSV"
+    },
+    {
+      "source": "Z029.csv",
+      "file": "stopping/Z029.csv",
+      "bytes": 95371,
+      "selected_rows": 832,
+      "archive": "data/stopping/Z029.csv.xz",
+      "origin": "Charge-resolved normalization and stopping derived from Dirac, GLOBAL and ATIMA 1.41 outputs"
+    },
+    {
+      "source": "Z054.csv",
+      "file": "delta/Z054.csv",
+      "bytes": 27235551,
+      "selected_rows": null,
+      "archive": "data/delta/Z054.csv.xz",
+      "origin": "Computed frozen-shell electron spectra, converted to runtime CSV"
+    },
+    {
+      "source": "Z054.csv",
+      "file": "stopping/Z054.csv",
+      "bytes": 99264,
+      "selected_rows": 866,
+      "archive": "data/stopping/Z054.csv.xz",
+      "origin": "Charge-resolved normalization and stopping derived from Dirac, GLOBAL and ATIMA 1.41 outputs"
+    },
+    {
+      "source": "Z092.csv",
+      "file": "delta/Z092.csv",
+      "bytes": 27235357,
+      "selected_rows": null,
+      "archive": "data/delta/Z092.csv.xz",
+      "origin": "Computed frozen-shell electron spectra, converted to runtime CSV"
+    },
+    {
+      "source": "Z092.csv",
+      "file": "stopping/Z092.csv",
+      "bytes": 96781,
+      "selected_rows": 845,
+      "archive": "data/stopping/Z092.csv.xz",
+      "origin": "Charge-resolved normalization and stopping derived from Dirac, GLOBAL and ATIMA 1.41 outputs"
+    },
+    {
+      "source": "global_transition_sigmas_Z29_96_Zt1_84_88_96_E30_2000_grid39.csv",
+      "file": "global.csv",
+      "bytes": 4539639,
+      "selected_rows": 37206,
+      "archive": "data/global.csv.xz",
+      "origin": "Selected computed GLOBAL charge-transition cross sections"
+    },
+    {
+      "source": "atima_equilibrium_per_atom_reference.csv",
+      "file": "atima_low.csv",
+      "bytes": 67509,
+      "selected_rows": 959,
+      "archive": "data/atima_low.csv.xz",
+      "origin": "Selected low-energy ATIMA-derived equilibrium stopping records with reference target masses"
+    }
+  ],
+  "central_energy_coordinate_Eu_MeV": [
+    30,
+    2000
+  ]
+}

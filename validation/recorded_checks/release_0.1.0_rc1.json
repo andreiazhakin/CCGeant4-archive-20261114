@@ -1,0 +1,52 @@
+{
+  "release": "v0.1.0-rc1",
+  "date": "2026-11-11",
+  "runtime_data": "runtime-20261107",
+  "new_transport_runs": false,
+  "checks": {
+    "complete_runtime_archives_and_members": {
+      "command": "python data/install_runtime.py --archives ARCHIVES --verify-only",
+      "passed": true,
+      "archives": 5,
+      "files": 188,
+      "archive_bytes": 5835094786,
+      "unpacked_bytes": 11237782524,
+      "verification": "Read all selected ZIP entries."
+    },
+    "source_patch": {
+      "command": "python tools/verify_patch.py --base GEANT4_11_4_0_ZIP",
+      "passed": true,
+      "modified_files": 8,
+      "added_files": 53
+    },
+    "partial_moments": {
+      "command": "python converters/dirac/test_partial_moments.py",
+      "passed": true,
+      "cut_cases": 144,
+      "maximum_error_normalized_to_full_moment": 1.2915103855366742e-15
+    },
+    "bundled_example_inputs": {
+      "command": "python examples/minimal/prepare_tables.py NEW_DIRECTORY",
+      "passed": true,
+      "verified_files": 8
+    },
+    "sparse_elastic_generator": {
+      "command": "python converters/elastic/generate_grazing_table.py --projectile 54 132 --target 14 28 --projectile-rms-fm 4.7859 --target-rms-fm 3.1224 --output NEW_DIRECTORY",
+      "passed": true,
+      "energy_nodes": 41,
+      "angular_nodes_total": 2706,
+      "verification": "Generated a five-column index and evaluated the table with the C++ loader."
+    },
+    "elastic_loader": {
+      "tables": [
+        "Fe-Si",
+        "Xe-Si",
+        "Pb-Si"
+      ],
+      "windows_before_after_same_results": true,
+      "sampled_angles": 900000,
+      "linux_standalone_probe": "passed",
+      "number_of_threads_checked": 4
+    }
+  }
+}

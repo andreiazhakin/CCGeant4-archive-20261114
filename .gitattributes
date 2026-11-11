@@ -1,0 +1,3 @@
+# Keep the reference sources and tables byte-identical across checkouts.
+* -text
+*.xz binary

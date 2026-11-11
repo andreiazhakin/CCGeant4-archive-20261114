@@ -1,0 +1,115 @@
+{
+  "passed": true,
+  "csv": {
+    "passed": true,
+    "status": "passed",
+    "source": "CC_Dirac_tables_20261101_30_2000",
+    "csv_root": "Cu/Xe/U demonstration CSV subset",
+    "projectiles": 3,
+    "records": [
+      {
+        "Z": 29,
+        "target_Z": [
+          1,
+          8,
+          14
+        ],
+        "delta_rows": 67655,
+        "stopping_rows": 832,
+        "delta_bytes": 20169221,
+        "stopping_bytes": 95371
+      },
+      {
+        "Z": 54,
+        "target_Z": [
+          1,
+          8,
+          14
+        ],
+        "delta_rows": 67655,
+        "stopping_rows": 866,
+        "delta_bytes": 27235551,
+        "stopping_bytes": 99264
+      },
+      {
+        "Z": 92,
+        "target_Z": [
+          1,
+          8,
+          14
+        ],
+        "delta_rows": 67655,
+        "stopping_rows": 845,
+        "delta_bytes": 27235357,
+        "stopping_bytes": 96781
+      }
+    ],
+    "total_csv_bytes": 74931545,
+    "expected_Z": [
+      29,
+      54,
+      92
+    ],
+    "selected_target_Z": [
+      1,
+      8,
+      14
+    ]
+  },
+  "GLOBAL": [
+    {
+      "Z": 29,
+      "rows": 12402,
+      "energies": 39,
+      "states": 28,
+      "sum_residual": 2.220446049250313e-16
+    },
+    {
+      "Z": 54,
+      "rows": 12402,
+      "energies": 39,
+      "states": 28,
+      "sum_residual": 2.220446049250313e-16
+    },
+    {
+      "Z": 92,
+      "rows": 12402,
+      "energies": 39,
+      "states": 28,
+      "sum_residual": 2.220446049250313e-16
+    }
+  ],
+  "ATIMA": {
+    "original_pairs": 9,
+    "low_rows": 959,
+    "reference_masses_match": true
+  },
+  "raw_Dirac": [
+    {
+      "Z": 29,
+      "Nmax": 10,
+      "energies": 39,
+      "nodes": 67655,
+      "all_arrays_exact": true
+    },
+    {
+      "Z": 54,
+      "Nmax": 15,
+      "energies": 39,
+      "nodes": 67655,
+      "all_arrays_exact": true
+    }
+  ],
+  "SS": {
+    "pairs": 1,
+    "energies": 207,
+    "angular_nodes": 2745803,
+    "checks": {
+      "max_sigma_relative_error": 0.0,
+      "max_cell_measure_relative_error": 6.623461682444579e-16,
+      "max_CDF_survival_complement_error": 6.439293542825908e-15
+    },
+    "index_hashes_match": true
+  },
+  "legacy_exact_subsets": true
+}

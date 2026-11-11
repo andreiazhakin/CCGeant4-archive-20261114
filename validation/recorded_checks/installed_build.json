@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "recorded_utc": "2026-11-03T18:47:47.168370+00:00",
+  "build_id": "Dirac-20261101-parallel-reset-20261103",
+  "base_geant4": "11.4.0",
+  "actual_installed_DLL_probe": {
+    "before_checks": 32,
+    "after_checks": 32,
+    "correct_loaded_DLL_path": true
+  },
+  "transport": [
+    {
+      "file": "Z029.csv",
+      "events": 8,
+      "all_event_fields_identical": true,
+      "max_balance_MeV": 2.9103830456733704e-11
+    },
+    {
+      "file": "Z054.csv",
+      "events": 8,
+      "all_event_fields_identical": true,
+      "max_balance_MeV": 1.8917489796876907e-10
+    },
+    {
+      "file": "Z092.csv",
+      "events": 8,
+      "all_event_fields_identical": true,
+      "max_balance_MeV": 4.511093720793724e-10
+    }
+  ],
+  "transport_events": 24,
+  "installed_DLL_matches_build": true,
+  "changed_DLLs": [
+    "G4processes_core.dll"
+  ]
+}

@@ -1,0 +1,28 @@
+name: Patch and converter checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Download and verify the Geant4 11.4.0 release
+        run: |
+          curl --fail --location --silent --show-error --retry 3 \
+            https://gitlab.cern.ch/geant4/geant4/-/archive/v11.4.0/geant4-v11.4.0.zip \
+            --output "$RUNNER_TEMP/geant4-v11.4.0.zip"
+          python3 tools/verify_patch.py --base "$RUNNER_TEMP/geant4-v11.4.0.zip"
+      - name: Check the three spectral moments against numerical quadrature
+        run: |
+          python3 -m venv "$RUNNER_TEMP/ccgeant4-venv"
+          "$RUNNER_TEMP/ccgeant4-venv/bin/python" -m pip install --only-binary=:all: numpy==2.3.5
+          "$RUNNER_TEMP/ccgeant4-venv/bin/python" converters/dirac/test_partial_moments.py

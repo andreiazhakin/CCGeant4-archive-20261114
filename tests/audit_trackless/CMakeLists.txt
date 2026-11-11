@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(CCAuditTrackless LANGUAGES CXX)
+find_package(Geant4 11.4 REQUIRED)
+include(${Geant4_USE_FILE})
+add_executable(audit_trackless audit_trackless.cc)
+target_compile_features(audit_trackless PRIVATE cxx_std_17)
+target_compile_definitions(audit_trackless PRIVATE NOMINMAX)
+target_link_libraries(audit_trackless PRIVATE ${Geant4_LIBRARIES})

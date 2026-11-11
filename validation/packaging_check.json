@@ -1,0 +1,10 @@
+{
+  "checked_base": "Geant4 11.4.0",
+  "git_apply_check": true,
+  "git_apply": true,
+  "checked_changed_added_files": 61,
+  "comparison": "The patched sources match the distributed files after normalizing line endings.",
+  "mismatches": [],
+  "physics_runs_performed": false,
+  "full_toolkit_build_performed": false
+}

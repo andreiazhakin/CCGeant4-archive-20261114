@@ -1,0 +1,16 @@
+{
+  "release": "article-data-20261109",
+  "url": "https://github.com/andreiazhakin/CCGeant4/releases/tag/article-data-20261109",
+  "software_release": "v0.1.0-rc1",
+  "runtime_release": "runtime-20261107",
+  "current_edition": {
+    "archive": "CCGeant4-article-data-20261109.zip",
+    "preprint_source": "CCGeant4_arxiv_source_20261109.zip",
+    "preprint_pdf": "manuscript_draft.pdf"
+  },
+  "previous_edition": {
+    "archive": "previous-20261109-CCGeant4-article-data-20261109.zip",
+    "preprint_source": "previous-20261109-CCGeant4_arxiv_source_20261109.zip",
+    "preprint_pdf": "previous-20261109-manuscript_draft.pdf"
+  }
+}

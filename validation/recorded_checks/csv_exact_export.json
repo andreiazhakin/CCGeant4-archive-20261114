@@ -1,0 +1,56 @@
+{
+  "passed": true,
+  "status": "passed",
+  "source": "CC_Dirac_tables_20261101_30_2000",
+  "csv_root": "Cu/Xe/U demonstration CSV subset",
+  "projectiles": 3,
+  "records": [
+    {
+      "Z": 29,
+      "target_Z": [
+        1,
+        8,
+        14
+      ],
+      "delta_rows": 67655,
+      "stopping_rows": 832,
+      "delta_bytes": 20169221,
+      "stopping_bytes": 95371
+    },
+    {
+      "Z": 54,
+      "target_Z": [
+        1,
+        8,
+        14
+      ],
+      "delta_rows": 67655,
+      "stopping_rows": 866,
+      "delta_bytes": 27235551,
+      "stopping_bytes": 99264
+    },
+    {
+      "Z": 92,
+      "target_Z": [
+        1,
+        8,
+        14
+      ],
+      "delta_rows": 67655,
+      "stopping_rows": 845,
+      "delta_bytes": 27235357,
+      "stopping_bytes": 96781
+    }
+  ],
+  "total_csv_bytes": 74931545,
+  "expected_Z": [
+    29,
+    54,
+    92
+  ],
+  "selected_target_Z": [
+    1,
+    8,
+    14
+  ]
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "Z": 29,
+    "A": 63,
+    "events": 8,
+    "mean_primary_loss_MeV": 48.9916135083713,
+    "mean_slab_deposit_MeV": 44.55531561412579,
+    "total_explicit_delta_electrons": 407,
+    "max_event_balance_MeV": 2.9103830456733704e-11,
+    "max_primary_balance_MeV": 3.4345234988994096e-11
+  },
+  {
+    "Z": 54,
+    "A": 124,
+    "events": 8,
+    "mean_primary_loss_MeV": 172.52257516745703,
+    "mean_slab_deposit_MeV": 152.8142027889603,
+    "total_explicit_delta_electrons": 1719,
+    "max_event_balance_MeV": 1.8917489796876907e-10,
+    "max_primary_balance_MeV": 1.7654993439540435e-10
+  },
+  {
+    "Z": 92,
+    "A": 238,
+    "events": 8,
+    "mean_primary_loss_MeV": 513.9680532663187,
+    "mean_slab_deposit_MeV": 419.07201570656133,
+    "total_explicit_delta_electrons": 5308,
+    "max_event_balance_MeV": 4.511093720793724e-10,
+    "max_primary_balance_MeV": 4.056510127836376e-10
+  }
+]

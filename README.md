@@ -161,4 +161,12 @@ with `--legacy 1 --Z 54 --A 124 --N 2 --energy 400 --events 8 --out legacy-xe.cs
 | `CCGeant4-runtime-20261107-elastic-Z71-82.zip` | `3f919ab7d576508c76e25331dfe41dcc96ba57f8fd76916a319087affb3fa0c3` |
 | `legacy_q2.csv` | `17ea430591081e0aade1f0c142937d1567c50c09239db39f5305c6c3521bda8d` |
 
+| Source and article archives | SHA-256 |
+| --- | --- |
+| `CCGeant4-0.1.0-rc1-source.zip` | `569b07ac723cf043bc03de7fb2d1c44f046928ae34097beb823afbbe163faa12` |
+| `CCGeant4-article-data-20261109.zip` | `97d40bf0d2c5582acbeacdbc9cb0cec2e37bccc0bcbf91c3a6feb1607f7ae9f7` |
+| `CCGeant4_arxiv_source_20261109.zip` | `0cd9be437f1a15d5ef1fd8b1c1fc8c259e254996171626bcfa2c865f9158f0c0` |
+| `previous-20261109-CCGeant4-article-data-20261109.zip` | `840548042ef3d96f136a2ac5324c3932e0dd3421612ab55c7c318141bdf15729` |
+| `previous-20261109-CCGeant4_arxiv_source_20261109.zip` | `96b3e96d2ffa25922aa45c8dd338e517fb1802dece8333f2e33241f271701b8b` |
+
 This product includes software developed by Members of the Geant4 Collaboration (http://cern.ch/geant4).

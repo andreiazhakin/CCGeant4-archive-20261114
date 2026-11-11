@@ -10,7 +10,7 @@ The archive manifest records the exact source commit.
 
 Download the data archive from that release. Rebuilding the plots uses the
 recorded events and does not require Geant4 or the runtime tables. The
-[release index](../validation/article-data-20261109.json) lists both editions.
+[release index](../validation/article-data-20261109.json) lists the three files.
 
 ## Contents
 

@@ -166,7 +166,5 @@ with `--legacy 1 --Z 54 --A 124 --N 2 --energy 400 --events 8 --out legacy-xe.cs
 | `CCGeant4-0.1.0-rc1-source.zip` | `569b07ac723cf043bc03de7fb2d1c44f046928ae34097beb823afbbe163faa12` |
 | `CCGeant4-article-data-20261109.zip` | `1049c2c40993b56f68ac5893618574588173987800a036df028fc59075a2b050` |
 | `CCGeant4_arxiv_source_20261109.zip` | `0cd9be437f1a15d5ef1fd8b1c1fc8c259e254996171626bcfa2c865f9158f0c0` |
-| `previous-20261109-CCGeant4-article-data-20261109.zip` | `fa1167821f56cdef03e9a5e66d7661bcc96411de217b68bdeddc538f046f97c0` |
-| `previous-20261109-CCGeant4_arxiv_source_20261109.zip` | `96b3e96d2ffa25922aa45c8dd338e517fb1802dece8333f2e33241f271701b8b` |
 
 This product includes software developed by Members of the Geant4 Collaboration (http://cern.ch/geant4).

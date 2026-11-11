@@ -7,10 +7,5 @@
     "archive": "CCGeant4-article-data-20261109.zip",
     "preprint_source": "CCGeant4_arxiv_source_20261109.zip",
     "preprint_pdf": "manuscript_draft.pdf"
-  },
-  "previous_edition": {
-    "archive": "previous-20261109-CCGeant4-article-data-20261109.zip",
-    "preprint_source": "previous-20261109-CCGeant4_arxiv_source_20261109.zip",
-    "preprint_pdf": "previous-20261109-manuscript_draft.pdf"
   }
 }

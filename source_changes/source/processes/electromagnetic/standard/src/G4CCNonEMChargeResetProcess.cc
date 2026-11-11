@@ -49,7 +49,7 @@ G4bool G4CCNonEMChargeResetProcess::ShouldResetAfter(const G4VProcess* process)
 
   const G4String& name = process->GetProcessName();
   static const std::vector<G4String> excluded = {
-    "Transportation", "CoupledTransportation", "StepLimiter", "UserSpecialCuts",
+    "Transportation", "CoupledTransportation", "StepLimiter", "UserSpecialCuts", "ionElastic",
     "CCNonEMChargeReset", "CCIonChargeExchange", "CCIonDeltaElectron", "CCIonIoni"
   };
   return std::find(excluded.begin(), excluded.end(), name) == excluded.end();

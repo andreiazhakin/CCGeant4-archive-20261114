@@ -8115,7 +8115,7 @@
 +}
 --- /dev/null
 +++ b/source/processes/electromagnetic/standard/src/G4CCNonEMChargeResetProcess.cc
-@@ -0,0 +1,75 @@
+@@ -0,0 +1,80 @@
 +#include "G4CCNonEMChargeResetProcess.hh"
 +
 +#include "G4CCIonChargeState.hh"
@@ -8126,6 +8126,7 @@
 +#include "G4StepPoint.hh"
 +#include "G4SystemOfUnits.hh"
 +#include "G4Track.hh"
++#include "G4TransportationProcessType.hh"
 +#include "G4VProcess.hh"
 +
 +#include <algorithm>
@@ -8164,6 +8165,10 @@
 +  if(process == nullptr) { return false; }
 +  const G4ProcessType type = process->GetProcessType();
 +  if(type == fTransportation || type == fElectromagnetic || type == fParallel) { return false; }
++  if(type == fGeneral) {
++    const G4int subtype = process->GetProcessSubType();
++    if(subtype == STEP_LIMITER || subtype == USER_SPECIAL_CUTS) { return false; }
++  }
 +
 +  const G4String& name = process->GetProcessName();
 +  static const std::vector<G4String> excluded = {

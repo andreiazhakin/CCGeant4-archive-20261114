@@ -8,6 +8,7 @@
 #include "G4StepPoint.hh"
 #include "G4SystemOfUnits.hh"
 #include "G4Track.hh"
+#include "G4TransportationProcessType.hh"
 #include "G4VProcess.hh"
 
 #include <algorithm>
@@ -46,6 +47,10 @@ G4bool G4CCNonEMChargeResetProcess::ShouldResetAfter(const G4VProcess* process)
   if(process == nullptr) { return false; }
   const G4ProcessType type = process->GetProcessType();
   if(type == fTransportation || type == fElectromagnetic || type == fParallel) { return false; }
+  if(type == fGeneral) {
+    const G4int subtype = process->GetProcessSubType();
+    if(subtype == STEP_LIMITER || subtype == USER_SPECIAL_CUTS) { return false; }
+  }
 
   const G4String& name = process->GetProcessName();
   static const std::vector<G4String> excluded = {

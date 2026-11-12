@@ -77,7 +77,7 @@
      G4ChemDissociationChannels.cc
 --- /dev/null
 +++ b/source/physics_lists/constructors/electromagnetic/src/G4EmStandardPhysics_option4_CurrentCharge.cc
-@@ -0,0 +1,201 @@
+@@ -0,0 +1,200 @@
 +#include "G4EmStandardPhysics_option4_CurrentCharge.hh"
 +
 +#include "G4CCCurrentChargeConfig.hh"
@@ -189,8 +189,7 @@
 +  G4EmStandardPhysics_option4::ConstructProcess();
 +  G4CCCurrentChargeConfig::Instance().EnsureMessenger();
 +  ReplaceIonIonisationAndAttachCurrentChargeProcesses();
-+  if(G4CCCurrentChargeConfig::Instance().IsDiracMode() &&
-+     ionScatteringMode_ == IonScatteringMode::Opt4MultipleScattering) {
++  if(ionScatteringMode_ == IonScatteringMode::Opt4MultipleScattering) {
 +    ReplaceNuclearStoppingWithEnergyBudget();
 +  }
 +  AttachIonSingleScattering();
@@ -2292,9 +2291,10 @@
 +}
 --- /dev/null
 +++ b/source/processes/electromagnetic/standard/src/G4CCAtimaQDedxTable.cc
-@@ -0,0 +1,370 @@
+@@ -0,0 +1,374 @@
 +#include "G4CCAtimaQDedxTable.hh"
 +
++#include "G4CCAtimaEquilibriumDedxTable.hh"
 +#include "G4AutoLock.hh"
 +#include "G4Exception.hh"
 +#include "G4StateManager.hh"
@@ -2642,7 +2642,10 @@
 +    const G4int zt = static_cast<G4int>(std::lround((*elements)[i]->GetZ()));
 +    G4double elemental = 0.0;
 +    if(!GetUnitMassDEDX(zp, zt, eMeVPerU, elemental)) { return false; }
-+    sum += fractions[i]*elemental;
++    const G4double referenceMass =
++      G4CCAtimaEquilibriumDedxTable::Instance().GetReferenceAtomicMass(zp, zt);
++    const G4double actualMass = (*elements)[i]->GetA()/(CLHEP::g/CLHEP::mole);
++    sum += fractions[i]*elemental*referenceMass/actualMass;
 +  }
 +
 +  valueMeVcm2PerG = sum;
@@ -2860,9 +2863,10 @@
 +}
 --- /dev/null
 +++ b/source/processes/electromagnetic/standard/src/G4CCBindingEnergyProvider.cc
-@@ -0,0 +1,87 @@
+@@ -0,0 +1,91 @@
 +#include "G4CCBindingEnergyProvider.hh"
 +
++#include "G4CCCurrentChargeConfig.hh"
 +#include "G4SystemOfUnits.hh"
 +
 +#include <algorithm>
@@ -2886,9 +2890,12 @@
 +      const G4double v = std::atof(envGeV);
 +      if(v > 0.0) { return v*GeV; }
 +    }
++    if(envMeV == nullptr && envGeV == nullptr) { return -1.0; }
 +    return 0.0;
 +  }();
-+  return value;
++  return value < 0.0
++    ? (G4CCCurrentChargeConfig::Instance().IsDiracMode() ? 0.0 : 1000.0*GeV)
++    : value;
 +}
 +
 +struct ShellSpec { G4int n; G4int capacity; G4double relFactor; };
@@ -6408,7 +6415,7 @@
 +}
 --- /dev/null
 +++ b/source/processes/electromagnetic/standard/src/G4CCLindhardSorensenIonModel.cc
-@@ -0,0 +1,1384 @@
+@@ -0,0 +1,1413 @@
 +#include "G4CCLindhardSorensenIonModel.hh"
 +
 +#include "G4AutoLock.hh"
@@ -6934,8 +6941,7 @@
 +G4bool G4CCLindhardSorensenIonModel::MayUseCachedCharge(
 +  const G4ParticleDefinition* p, const G4Material* mat) const
 +{
-+  return fHasCachedCurrentCharge &&
-+    (!G4CCCurrentChargeConfig::Instance().IsDiracMode() || InTransportContext(p, mat));
++  return fHasCachedCurrentCharge && InTransportContext(p, mat);
 +}
 +
 +G4double G4CCLindhardSorensenIonModel::ChargeSquareRatio(const G4Track& track)
@@ -7281,8 +7287,7 @@
 +     G4CCIonChargeState::IonisationModelApplies(p, mat) &&
 +     preEu >= 2.0 && (G4CCCurrentChargeConfig::Instance().IsDiracMode() || preEu <= 40.0 || (allowPlateau && preEu <= 1500.0)) && length > 0.0) {
 +    G4double deltaCut = cut;
-+    if(CurrentCouple() != nullptr &&
-+       (!G4CCCurrentChargeConfig::Instance().IsDiracMode() || InTransportContext(p, mat))) {
++    if(CurrentCouple() != nullptr && InTransportContext(p, mat)) {
 +      const auto* cuts = G4ProductionCutsTable::GetProductionCutsTable()->GetEnergyCutsVector(1);
 +      const G4int idx = CurrentCouple()->GetIndex();
 +      if(cuts != nullptr && idx >= 0 && static_cast<std::size_t>(idx) < cuts->size()) {
@@ -7291,23 +7296,32 @@
 +    }
 +    const G4double charge = MayUseCachedCharge(p, mat) ? fCachedChargeInEplus
 +      : static_cast<G4double>(G4CCIonChargeState::GetZp(p));
-+    const G4double boundary = G4CCCurrentChargeConfig::Instance().IsDiracMode()
++    G4double boundary = G4CCCurrentChargeConfig::Instance().IsDiracMode()
 +      ? 2.0/931.494*p->GetPDGMass() : 2.0*MeV*G4CCIonChargeState::GetA(p);
++    while(G4CCIonChargeState::KineticEnergyPerNucleon(p, boundary)/MeV < 2.0) {
++      boundary = std::nextafter(boundary, preKinEnergy);
++    }
 +    G4double stopping = 0.0;
 +    const G4bool available = ComputeAtimaRestrictedDEDX(mat, p, preKinEnergy,
 +      deltaCut, charge, stopping, nullptr, nullptr, true);
 +    if(available) {
++      const auto updateStopping = [&](G4double energy) {
++        if(ComputeAtimaRestrictedDEDX(mat, p, energy, deltaCut, charge, stopping,
++                                     nullptr, nullptr, true)) { return true; }
++        G4Exception("G4CCLindhardSorensenIonModel::ApplyAtimaAlongStep",
++          "CCAtimaStepEvaluation", FatalException,
++          "Stopping is unavailable inside the ATIMA part of a transport step.");
++        return false;
++      };
 +      G4double loss = stopping*length;
 +      for(G4int iteration = 0; iteration < 3; ++iteration) {
 +        const G4double midpoint = std::max(boundary, preKinEnergy-0.5*loss);
-+        ComputeAtimaRestrictedDEDX(mat, p, midpoint, deltaCut, charge, stopping,
-+                                  nullptr, nullptr, true);
++        if(!updateStopping(midpoint)) { return false; }
 +        loss = stopping*length;
 +      }
 +      const G4double toBoundary = preKinEnergy-boundary;
 +      if(loss > toBoundary) {
-+        ComputeAtimaRestrictedDEDX(mat, p, 0.5*(preKinEnergy+boundary),
-+                                  deltaCut, charge, stopping);
++        if(!updateStopping(0.5*(preKinEnergy+boundary))) { return false; }
 +        const G4double boundaryLength = stopping > 0.0 ? toBoundary/stopping : length;
 +        if(boundaryLength < length) {
 +          G4double remainingLength = length-std::max(0.0, boundaryLength);
@@ -7389,10 +7403,11 @@
 +{
 +  SetParticle(p);
 +
-+  if(G4CCCurrentChargeConfig::Instance().IsDiracMode() && !InTransportContext(p, mat)) {
++  if(!InTransportContext(p, mat)) {
 +    G4double stopping = 0.0;
-+    if(ComputeDiracRestrictedDEDX(mat, p, preKinEnergy, cut,
-+         static_cast<G4double>(G4CCIonChargeState::GetZp(p)), stopping)) {
++    if(ComputeAtimaRestrictedDEDX(mat, p, preKinEnergy, cut,
++         static_cast<G4double>(G4CCIonChargeState::GetZp(p)), stopping,
++         nullptr, nullptr, true)) {
 +      eloss = std::max(0.0, length)*stopping;
 +      return;
 +    }
@@ -7444,6 +7459,21 @@
 +
 +  G4bool tableBlendActive = false;
 +  G4double tableEloss = 0.0;
++  G4double tableFullDedx = 0.0;
++  G4double tableHardDeltaDedx = 0.0;
++  const auto checkResidual = [&](G4double residual, G4double full, G4double hard) {
++    if(!std::isfinite(residual) || residual < -1.e-12*std::max(std::abs(full), std::abs(hard))) {
++      G4ExceptionDescription message;
++      message << "Negative/nonfinite Legacy restricted stopping: Z=" << zProjectile
++              << ", E/A=" << eMeVPerU << " MeV/u, q=" << qCurrentInEplus
++              << ", material=" << mat->GetName() << ", cut=" << cut/keV
++              << " keV. The explicit spectrum exceeds the full stopping.";
++      G4Exception("G4CCLindhardSorensenIonModel::CorrectionsAlongStep",
++                  "CCAtimaNegativeResidual", FatalException, message);
++      return false;
++    }
++    return true;
++  };
 +  const G4int zMottLowTransition = inCurrentChargeDomain
 +    ? G4CCChooseMottZForDeltaSubtraction(qCurrentInEplus, zProjectile,
 +                                       fCorrections, p, mat, e) : 0;
@@ -7459,8 +7489,7 @@
 +  if((correctAnalyticFallback ||
 +      (G4CCCurrentChargeConfig::Instance().UseAtimaEquilibriumDedx() &&
 +       inCurrentChargeDomain && G4CCCurrentChargeConfig::UseCCDeltaAtEnergy(eMeVPerU))) &&
-+     CurrentCouple() != nullptr &&
-+     (!G4CCCurrentChargeConfig::Instance().IsDiracMode() || InTransportContext(p, mat))) {
++     CurrentCouple() != nullptr && InTransportContext(p, mat)) {
 +    const auto* cuts = G4ProductionCutsTable::GetProductionCutsTable()->GetEnergyCutsVector(1);
 +    const G4int idx = CurrentCouple()->GetIndex();
 +    if(cuts != nullptr && idx >= 0 && static_cast<std::size_t>(idx) < cuts->size()) {
@@ -7469,17 +7498,15 @@
 +  }
 +  if(inCurrentChargeDomain && globalWeight > 0.0 &&
 +     G4CCCurrentChargeConfig::Instance().UseAtimaQDedxTable()) {
-+    G4double tableFullDedx = 0.0;
 +    if(G4CCAtimaQDedxTable::Instance().GetMaterialDEDXPerVolume(p, mat, e, q2Current, tableFullDedx)) {
 +      const G4int qeCurrent = std::max(0, std::min(zProjectile,
 +        static_cast<G4int>(std::lround(static_cast<G4double>(zProjectile) - qCurrentInEplus))));
 +
-+      const G4double tableHardDeltaDedx = G4CCDeltaMeanLossPerVolumeForChargeState(
++      tableHardDeltaDedx = G4CCDeltaMeanLossPerVolumeForChargeState(
 +        mat, p, e, deltaCut, zProjectile, qeCurrent, qCurrentInEplus, q2Effective,
 +        1.0, mottActiveForStep, fCorrections);
 +      const G4double tableResidual = tableFullDedx - tableHardDeltaDedx;
-+      const G4double tableContDedx = correctAnalyticFallback
-+        ? tableResidual : std::max(0.0, tableResidual);
++      const G4double tableContDedx = tableResidual;
 +
 +      tableBlendActive = true;
 +      tableEloss = tableContDedx*length;
@@ -7505,6 +7532,7 @@
 +      }
 +
 +      if(globalWeight > 0.999999 && !correctAnalyticFallback) {
++        if(!checkResidual(tableResidual, tableFullDedx, tableHardDeltaDedx)) { return; }
 +        eloss = std::max(0.0, std::min(tableEloss, preKinEnergy));
 +        return;
 +      }
@@ -7557,6 +7585,11 @@
 +    if(tableBlendActive) {
 +      correctedLoss = (1.0 - globalWeight)*correctedLoss + globalWeight*tableEloss;
 +    }
++    const G4double fullLoss = length*(tableBlendActive
++      ? (1.0-globalWeight)*fullDedx + globalWeight*tableFullDedx : fullDedx);
++    const G4double hardLoss = length*(tableBlendActive
++      ? (1.0-globalWeight)*hardMottDedx + globalWeight*tableHardDeltaDedx : hardMottDedx);
++    if(!checkResidual(correctedLoss, fullLoss, hardLoss)) { return; }
 +    eloss = std::max(0.0, std::min(correctedLoss, preKinEnergy));
 +    if(G4CCBlochDiagnosticsEnabled()) {
 +      const G4int n = gBlochDiagnosticPrints.fetch_add(1);
@@ -7689,7 +7722,10 @@
 +  }
 +
 +  if(tableBlendActive) {
++    const G4double fullLoss = globalWeight*tableFullDedx*length + (1.0-globalWeight)*res;
++    const G4double hardLoss = globalWeight*tableHardDeltaDedx*length;
 +    res = globalWeight*tableEloss + (1.0 - globalWeight)*res;
++    if(!checkResidual(res, fullLoss, hardLoss)) { return; }
 +    eloss = std::max(0.0, std::min(res, preKinEnergy));
 +    return;
 +  }
@@ -8157,7 +8193,7 @@
 +}
 --- /dev/null
 +++ b/source/processes/electromagnetic/standard/src/G4CCNuclearStopping.cc
-@@ -0,0 +1,160 @@
+@@ -0,0 +1,153 @@
 +//
 +// ********************************************************************
 +// * License and Disclaimer                                           *
@@ -8204,9 +8240,6 @@
 +//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 +
 +#include "G4CCNuclearStopping.hh"
-+#include "G4CCCurrentChargeConfig.hh"
-+#include "G4CCDiracPhysics.hh"
-+#include "G4CCDiracTable.hh"
 +#include "G4ICRU49NuclearStoppingModel.hh"
 +#include "G4SystemOfUnits.hh"
 +#include "G4PhysicalConstants.hh"
@@ -8295,11 +8328,7 @@
 +      if(mod->IsActive(Tscaled)) {
 +	G4double nloss = 
 +	  length*mod->ComputeDEDXPerVolume(couple->GetMaterial(), part, T);
-+        const G4int zp = part->GetAtomicNumber();
-+        const G4bool limitToRemaining =
-+          G4CCCurrentChargeConfig::Instance().IsDiracMode() && zp >= 29 && zp <= 92 &&
-+          G4CCDiracPhysics::Tables().HasProjectile(zp);
-+        nloss = std::min(nloss, limitToRemaining ? T2 : T1);
++        nloss = std::min(nloss, T2);
 +	nParticleChange.SetProposedKineticEnergy(T1 - nloss);
 +	nParticleChange.ProposeLocalEnergyDeposit(nloss);
 +	nParticleChange.ProposeNonIonizingEnergyDeposit(nloss);
@@ -8313,7 +8342,7 @@
 +
 +void G4CCNuclearStopping::ProcessDescription(std::ostream& out) const
 +{
-+  out << "  Nuclear stopping (CC supported ions: remaining-energy cap)";
++  out << "  Nuclear stopping (CC remaining-energy cap)";
 +  G4VEmProcess::ProcessDescription(out);
 +}
 +

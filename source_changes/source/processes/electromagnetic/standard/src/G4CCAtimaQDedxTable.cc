@@ -1,5 +1,6 @@
 #include "G4CCAtimaQDedxTable.hh"
 
+#include "G4CCAtimaEquilibriumDedxTable.hh"
 #include "G4AutoLock.hh"
 #include "G4Exception.hh"
 #include "G4StateManager.hh"
@@ -347,7 +348,10 @@ G4bool G4CCAtimaQDedxTable::GetMaterialUnitMassDEDX(const G4ParticleDefinition* 
     const G4int zt = static_cast<G4int>(std::lround((*elements)[i]->GetZ()));
     G4double elemental = 0.0;
     if(!GetUnitMassDEDX(zp, zt, eMeVPerU, elemental)) { return false; }
-    sum += fractions[i]*elemental;
+    const G4double referenceMass =
+      G4CCAtimaEquilibriumDedxTable::Instance().GetReferenceAtomicMass(zp, zt);
+    const G4double actualMass = (*elements)[i]->GetA()/(CLHEP::g/CLHEP::mole);
+    sum += fractions[i]*elemental*referenceMass/actualMass;
   }
 
   valueMeVcm2PerG = sum;

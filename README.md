@@ -79,7 +79,9 @@ mean square charge for each projectile, target and energy. For an ion of
 charge $q$ in units of the elementary charge, Legacy multiplies the ATIMA
 value by $q^2/\langle q^2\rangle_{\rm eq}$. The other two inputs are
 `global.csv` for charge exchange and `atima_low.csv` for low-energy
-equilibrium stopping.
+equilibrium stopping. The latter must include `At_ref_g_mol`, as in the
+supplied tables. These reference molar masses are also used to scale Legacy
+stopping to the actual target isotope composition.
 
 From the repository root, install the [ionization archive](data/README.md#installation)
 in a new directory, then set the variables below before launching the application.
@@ -108,11 +110,12 @@ unset G4CC_BINDING_OVERRIDE_MEV
 export G4CC_BINDING_OVERRIDE_GEV=1000
 ```
 
-The 1000 GeV override reproduces the screening assumption used in the Legacy
+The default 1000 GeV override reproduces the screening assumption used in the Legacy
 benchmarks. It keeps the charge entering the normalization of the delta-electron
 spectrum close to the instantaneous ionic charge over the electron energies
-studied. Without an override, Legacy estimates the binding energies of individual
-shells. A positive value of `G4CC_BINDING_OVERRIDE_MEV` takes precedence over
+studied. It applies when neither binding-override variable is set. To use
+individual shell binding estimates, set `G4CC_BINDING_OVERRIDE_GEV=0` and leave
+`G4CC_BINDING_OVERRIDE_MEV` unset. A positive value of `G4CC_BINDING_OVERRIDE_MEV` takes precedence over
 `G4CC_BINDING_OVERRIDE_GEV`.
 
 The Weick comparisons used the default values for the following settings.

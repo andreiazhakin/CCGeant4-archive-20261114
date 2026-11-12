@@ -1,5 +1,6 @@
 #include "G4CCBindingEnergyProvider.hh"
 
+#include "G4CCCurrentChargeConfig.hh"
 #include "G4SystemOfUnits.hh"
 
 #include <algorithm>
@@ -23,9 +24,12 @@ G4double BindingOverrideEnergy()
       const G4double v = std::atof(envGeV);
       if(v > 0.0) { return v*GeV; }
     }
+    if(envMeV == nullptr && envGeV == nullptr) { return -1.0; }
     return 0.0;
   }();
-  return value;
+  return value < 0.0
+    ? (G4CCCurrentChargeConfig::Instance().IsDiracMode() ? 0.0 : 1000.0*GeV)
+    : value;
 }
 
 struct ShellSpec { G4int n; G4int capacity; G4double relFactor; };

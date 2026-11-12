@@ -44,9 +44,6 @@
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 #include "G4CCNuclearStopping.hh"
-#include "G4CCCurrentChargeConfig.hh"
-#include "G4CCDiracPhysics.hh"
-#include "G4CCDiracTable.hh"
 #include "G4ICRU49NuclearStoppingModel.hh"
 #include "G4SystemOfUnits.hh"
 #include "G4PhysicalConstants.hh"
@@ -135,11 +132,7 @@ G4VParticleChange* G4CCNuclearStopping::AlongStepDoIt(const G4Track& track,
       if(mod->IsActive(Tscaled)) {
 	G4double nloss = 
 	  length*mod->ComputeDEDXPerVolume(couple->GetMaterial(), part, T);
-        const G4int zp = part->GetAtomicNumber();
-        const G4bool limitToRemaining =
-          G4CCCurrentChargeConfig::Instance().IsDiracMode() && zp >= 29 && zp <= 92 &&
-          G4CCDiracPhysics::Tables().HasProjectile(zp);
-        nloss = std::min(nloss, limitToRemaining ? T2 : T1);
+        nloss = std::min(nloss, T2);
 	nParticleChange.SetProposedKineticEnergy(T1 - nloss);
 	nParticleChange.ProposeLocalEnergyDeposit(nloss);
 	nParticleChange.ProposeNonIonizingEnergyDeposit(nloss);
@@ -153,7 +146,7 @@ G4VParticleChange* G4CCNuclearStopping::AlongStepDoIt(const G4Track& track,
 
 void G4CCNuclearStopping::ProcessDescription(std::ostream& out) const
 {
-  out << "  Nuclear stopping (CC supported ions: remaining-energy cap)";
+  out << "  Nuclear stopping (CC remaining-energy cap)";
   G4VEmProcess::ProcessDescription(out);
 }
 

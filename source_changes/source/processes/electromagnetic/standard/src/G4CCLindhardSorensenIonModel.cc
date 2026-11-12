@@ -523,8 +523,7 @@ G4bool G4CCLindhardSorensenIonModel::InTransportContext(
 G4bool G4CCLindhardSorensenIonModel::MayUseCachedCharge(
   const G4ParticleDefinition* p, const G4Material* mat) const
 {
-  return fHasCachedCurrentCharge &&
-    (!G4CCCurrentChargeConfig::Instance().IsDiracMode() || InTransportContext(p, mat));
+  return fHasCachedCurrentCharge && InTransportContext(p, mat);
 }
 
 G4double G4CCLindhardSorensenIonModel::ChargeSquareRatio(const G4Track& track)
@@ -870,8 +869,7 @@ G4bool G4CCLindhardSorensenIonModel::ApplyAtimaAlongStep(
      G4CCIonChargeState::IonisationModelApplies(p, mat) &&
      preEu >= 2.0 && (G4CCCurrentChargeConfig::Instance().IsDiracMode() || preEu <= 40.0 || (allowPlateau && preEu <= 1500.0)) && length > 0.0) {
     G4double deltaCut = cut;
-    if(CurrentCouple() != nullptr &&
-       (!G4CCCurrentChargeConfig::Instance().IsDiracMode() || InTransportContext(p, mat))) {
+    if(CurrentCouple() != nullptr && InTransportContext(p, mat)) {
       const auto* cuts = G4ProductionCutsTable::GetProductionCutsTable()->GetEnergyCutsVector(1);
       const G4int idx = CurrentCouple()->GetIndex();
       if(cuts != nullptr && idx >= 0 && static_cast<std::size_t>(idx) < cuts->size()) {
@@ -880,23 +878,32 @@ G4bool G4CCLindhardSorensenIonModel::ApplyAtimaAlongStep(
     }
     const G4double charge = MayUseCachedCharge(p, mat) ? fCachedChargeInEplus
       : static_cast<G4double>(G4CCIonChargeState::GetZp(p));
-    const G4double boundary = G4CCCurrentChargeConfig::Instance().IsDiracMode()
+    G4double boundary = G4CCCurrentChargeConfig::Instance().IsDiracMode()
       ? 2.0/931.494*p->GetPDGMass() : 2.0*MeV*G4CCIonChargeState::GetA(p);
+    while(G4CCIonChargeState::KineticEnergyPerNucleon(p, boundary)/MeV < 2.0) {
+      boundary = std::nextafter(boundary, preKinEnergy);
+    }
     G4double stopping = 0.0;
     const G4bool available = ComputeAtimaRestrictedDEDX(mat, p, preKinEnergy,
       deltaCut, charge, stopping, nullptr, nullptr, true);
     if(available) {
+      const auto updateStopping = [&](G4double energy) {
+        if(ComputeAtimaRestrictedDEDX(mat, p, energy, deltaCut, charge, stopping,
+                                     nullptr, nullptr, true)) { return true; }
+        G4Exception("G4CCLindhardSorensenIonModel::ApplyAtimaAlongStep",
+          "CCAtimaStepEvaluation", FatalException,
+          "Stopping is unavailable inside the ATIMA part of a transport step.");
+        return false;
+      };
       G4double loss = stopping*length;
       for(G4int iteration = 0; iteration < 3; ++iteration) {
         const G4double midpoint = std::max(boundary, preKinEnergy-0.5*loss);
-        ComputeAtimaRestrictedDEDX(mat, p, midpoint, deltaCut, charge, stopping,
-                                  nullptr, nullptr, true);
+        if(!updateStopping(midpoint)) { return false; }
         loss = stopping*length;
       }
       const G4double toBoundary = preKinEnergy-boundary;
       if(loss > toBoundary) {
-        ComputeAtimaRestrictedDEDX(mat, p, 0.5*(preKinEnergy+boundary),
-                                  deltaCut, charge, stopping);
+        if(!updateStopping(0.5*(preKinEnergy+boundary))) { return false; }
         const G4double boundaryLength = stopping > 0.0 ? toBoundary/stopping : length;
         if(boundaryLength < length) {
           G4double remainingLength = length-std::max(0.0, boundaryLength);
@@ -978,10 +985,11 @@ void G4CCLindhardSorensenIonModel::CorrectionsAlongStep(
 {
   SetParticle(p);
 
-  if(G4CCCurrentChargeConfig::Instance().IsDiracMode() && !InTransportContext(p, mat)) {
+  if(!InTransportContext(p, mat)) {
     G4double stopping = 0.0;
-    if(ComputeDiracRestrictedDEDX(mat, p, preKinEnergy, cut,
-         static_cast<G4double>(G4CCIonChargeState::GetZp(p)), stopping)) {
+    if(ComputeAtimaRestrictedDEDX(mat, p, preKinEnergy, cut,
+         static_cast<G4double>(G4CCIonChargeState::GetZp(p)), stopping,
+         nullptr, nullptr, true)) {
       eloss = std::max(0.0, length)*stopping;
       return;
     }
@@ -1033,6 +1041,21 @@ void G4CCLindhardSorensenIonModel::CorrectionsAlongStep(
 
   G4bool tableBlendActive = false;
   G4double tableEloss = 0.0;
+  G4double tableFullDedx = 0.0;
+  G4double tableHardDeltaDedx = 0.0;
+  const auto checkResidual = [&](G4double residual, G4double full, G4double hard) {
+    if(!std::isfinite(residual) || residual < -1.e-12*std::max(std::abs(full), std::abs(hard))) {
+      G4ExceptionDescription message;
+      message << "Negative/nonfinite Legacy restricted stopping: Z=" << zProjectile
+              << ", E/A=" << eMeVPerU << " MeV/u, q=" << qCurrentInEplus
+              << ", material=" << mat->GetName() << ", cut=" << cut/keV
+              << " keV. The explicit spectrum exceeds the full stopping.";
+      G4Exception("G4CCLindhardSorensenIonModel::CorrectionsAlongStep",
+                  "CCAtimaNegativeResidual", FatalException, message);
+      return false;
+    }
+    return true;
+  };
   const G4int zMottLowTransition = inCurrentChargeDomain
     ? G4CCChooseMottZForDeltaSubtraction(qCurrentInEplus, zProjectile,
                                        fCorrections, p, mat, e) : 0;
@@ -1048,8 +1071,7 @@ void G4CCLindhardSorensenIonModel::CorrectionsAlongStep(
   if((correctAnalyticFallback ||
       (G4CCCurrentChargeConfig::Instance().UseAtimaEquilibriumDedx() &&
        inCurrentChargeDomain && G4CCCurrentChargeConfig::UseCCDeltaAtEnergy(eMeVPerU))) &&
-     CurrentCouple() != nullptr &&
-     (!G4CCCurrentChargeConfig::Instance().IsDiracMode() || InTransportContext(p, mat))) {
+     CurrentCouple() != nullptr && InTransportContext(p, mat)) {
     const auto* cuts = G4ProductionCutsTable::GetProductionCutsTable()->GetEnergyCutsVector(1);
     const G4int idx = CurrentCouple()->GetIndex();
     if(cuts != nullptr && idx >= 0 && static_cast<std::size_t>(idx) < cuts->size()) {
@@ -1058,17 +1080,15 @@ void G4CCLindhardSorensenIonModel::CorrectionsAlongStep(
   }
   if(inCurrentChargeDomain && globalWeight > 0.0 &&
      G4CCCurrentChargeConfig::Instance().UseAtimaQDedxTable()) {
-    G4double tableFullDedx = 0.0;
     if(G4CCAtimaQDedxTable::Instance().GetMaterialDEDXPerVolume(p, mat, e, q2Current, tableFullDedx)) {
       const G4int qeCurrent = std::max(0, std::min(zProjectile,
         static_cast<G4int>(std::lround(static_cast<G4double>(zProjectile) - qCurrentInEplus))));
 
-      const G4double tableHardDeltaDedx = G4CCDeltaMeanLossPerVolumeForChargeState(
+      tableHardDeltaDedx = G4CCDeltaMeanLossPerVolumeForChargeState(
         mat, p, e, deltaCut, zProjectile, qeCurrent, qCurrentInEplus, q2Effective,
         1.0, mottActiveForStep, fCorrections);
       const G4double tableResidual = tableFullDedx - tableHardDeltaDedx;
-      const G4double tableContDedx = correctAnalyticFallback
-        ? tableResidual : std::max(0.0, tableResidual);
+      const G4double tableContDedx = tableResidual;
 
       tableBlendActive = true;
       tableEloss = tableContDedx*length;
@@ -1094,6 +1114,7 @@ void G4CCLindhardSorensenIonModel::CorrectionsAlongStep(
       }
 
       if(globalWeight > 0.999999 && !correctAnalyticFallback) {
+        if(!checkResidual(tableResidual, tableFullDedx, tableHardDeltaDedx)) { return; }
         eloss = std::max(0.0, std::min(tableEloss, preKinEnergy));
         return;
       }
@@ -1146,6 +1167,11 @@ void G4CCLindhardSorensenIonModel::CorrectionsAlongStep(
     if(tableBlendActive) {
       correctedLoss = (1.0 - globalWeight)*correctedLoss + globalWeight*tableEloss;
     }
+    const G4double fullLoss = length*(tableBlendActive
+      ? (1.0-globalWeight)*fullDedx + globalWeight*tableFullDedx : fullDedx);
+    const G4double hardLoss = length*(tableBlendActive
+      ? (1.0-globalWeight)*hardMottDedx + globalWeight*tableHardDeltaDedx : hardMottDedx);
+    if(!checkResidual(correctedLoss, fullLoss, hardLoss)) { return; }
     eloss = std::max(0.0, std::min(correctedLoss, preKinEnergy));
     if(G4CCBlochDiagnosticsEnabled()) {
       const G4int n = gBlochDiagnosticPrints.fetch_add(1);
@@ -1278,7 +1304,10 @@ void G4CCLindhardSorensenIonModel::CorrectionsAlongStep(
   }
 
   if(tableBlendActive) {
+    const G4double fullLoss = globalWeight*tableFullDedx*length + (1.0-globalWeight)*res;
+    const G4double hardLoss = globalWeight*tableHardDeltaDedx*length;
     res = globalWeight*tableEloss + (1.0 - globalWeight)*res;
+    if(!checkResidual(res, fullLoss, hardLoss)) { return; }
     eloss = std::max(0.0, std::min(res, preKinEnergy));
     return;
   }

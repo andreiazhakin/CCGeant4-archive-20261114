@@ -109,8 +109,7 @@ void G4EmStandardPhysics_option4_CurrentCharge::ConstructProcess()
   G4EmStandardPhysics_option4::ConstructProcess();
   G4CCCurrentChargeConfig::Instance().EnsureMessenger();
   ReplaceIonIonisationAndAttachCurrentChargeProcesses();
-  if(G4CCCurrentChargeConfig::Instance().IsDiracMode() &&
-     ionScatteringMode_ == IonScatteringMode::Opt4MultipleScattering) {
+  if(ionScatteringMode_ == IonScatteringMode::Opt4MultipleScattering) {
     ReplaceNuclearStoppingWithEnergyBudget();
   }
   AttachIonSingleScattering();

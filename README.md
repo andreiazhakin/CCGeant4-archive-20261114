@@ -39,12 +39,13 @@ cmake --install build-g4 --config Release
 ```
 
 Initialize the Geant4 environment for that installation. The patch is the
-installation method. The same 8 modified and 53 added files can be inspected
+installation method. The same 11 modified and 53 added files can be inspected
 individually in [source_changes/](source_changes/).
+After updating the patch, rebuild Geant4 and the applications linked to it.
 
 To verify the source patch locally without building the toolkit, run
 `python tools/verify_patch.py --base /path/to/geant4-v11.4.0.zip`. It checks
-that the patch applies and the 61 resulting files match the distributed sources in a temporary directory.
+that the patch applies and the 64 resulting files match the distributed sources in a temporary directory.
 
 ## Run the silicon example
 
@@ -122,12 +123,10 @@ The Weick comparisons used the default values for the following settings.
 
 | Environment variable | Value | Role |
 | --- | --- | --- |
-| `G4CC_USE_ATIMA_Q_DEDX` | `1` | Use the charge-scaled stopping table. |
-| `G4CC_USE_ATIMA_EQUILIBRIUM_DEDX` | `1` | Use tabulated equilibrium stopping at low energies. |
 | `G4CC_USE_MOTT_DELTA`, `G4CC_MOTT_MIN_ENERGY_MEV_U` | `1`, `2` | Use the Mott correction for explicit delta electrons from 2 MeV/u. |
 | `G4CC_DISABLE_CONTINUOUS_LS_FOR_MOTT_DELTA` | `1` | Suppress the separate continuous Lindhard–Sørensen correction when the Mott correction is active. |
 | `G4CC_ENABLE_SMOOTH_GLOBAL_FALLBACK` | `1` | Use smooth transitions at the ends of the table range. |
-| `G4CC_GLOBAL_WEIGHT_LOW0_MEV_U`, `G4CC_GLOBAL_WEIGHT_LOW1_MEV_U` | `30`, `40` | Lower transition limits with equilibrium stopping enabled. |
+| `G4CC_GLOBAL_WEIGHT_LOW0_MEV_U`, `G4CC_GLOBAL_WEIGHT_LOW1_MEV_U` | `30`, `40` | Lower transition limits. |
 | `G4CC_GLOBAL_WEIGHT_HIGH0_MEV_U`, `G4CC_GLOBAL_WEIGHT_HIGH1_MEV_U` | `1500`, `2000` | Upper transition limits. |
 | `G4CC_FLUCTUATION_MODE`, `G4CC_FLUCTUATION_MIX_POWER` | `mix`, `1` | Select Universal or ion fluctuations with the transition weights. |
 

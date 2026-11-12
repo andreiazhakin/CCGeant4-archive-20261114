@@ -83,21 +83,6 @@ namespace
     value = static_cast<G4int>(std::lround(v));
     return true;
   }
-
-  G4bool EnvFlagValue(const char* value, G4bool defaultValue)
-  {
-    if(value == nullptr) { return defaultValue; }
-    const G4String s(value);
-    if(s == "0" || s == "false" || s == "FALSE" || s == "off" || s == "OFF" ||
-       s == "no" || s == "NO") {
-      return false;
-    }
-    if(s == "1" || s == "true" || s == "TRUE" || s == "on" || s == "ON" ||
-       s == "yes" || s == "YES") {
-      return true;
-    }
-    return defaultValue;
-  }
 }
 
 G4CCAtimaQDedxTable& G4CCAtimaQDedxTable::Instance()
@@ -111,7 +96,6 @@ G4CCAtimaQDedxTable::G4CCAtimaQDedxTable()
   const char* path = std::getenv("G4CC_ATIMA_Q_DEDX_TABLE");
   if(path == nullptr) { path = std::getenv("G4CC_ATIMA_DEDX_TABLE"); }
   if(path != nullptr) { fPath = path; }
-  fUseTable = EnvFlagValue(std::getenv("G4CC_USE_ATIMA_Q_DEDX"), true);
 }
 
 void G4CCAtimaQDedxTable::CheckConfigurationChangeAllowed()
@@ -140,17 +124,6 @@ void G4CCAtimaQDedxTable::SetPath(const G4String& path)
   Clear();
 }
 
-G4bool G4CCAtimaQDedxTable::UseTable() const
-{
-  return fUseTable.load(std::memory_order_acquire);
-}
-
-void G4CCAtimaQDedxTable::SetUseTable(G4bool value)
-{
-  CheckConfigurationChangeAllowed();
-  fUseTable.store(value, std::memory_order_release);
-}
-
 G4bool G4CCAtimaQDedxTable::IsLoaded() const
 {
   return fLoaded.load(std::memory_order_acquire);
@@ -175,13 +148,12 @@ long G4CCAtimaQDedxTable::Key(G4int zProjectile, G4int zTarget)
 
 G4bool G4CCAtimaQDedxTable::EnsureLoaded() const
 {
-  if(!fUseTable.load(std::memory_order_acquire)) { return false; }
   if(fLoadAttempted.load(std::memory_order_acquire)) {
     return fLoaded.load(std::memory_order_acquire);
   }
 
   G4AutoLock lock(&g4ccAtimaQDedxMutex);
-  if(!fUseTable.load(std::memory_order_acquire) || fPath.empty()) { return false; }
+  if(fPath.empty()) { return false; }
   if(!fLoadAttempted.load(std::memory_order_acquire)) {
     const G4bool loaded = Load();
     fLoaded.store(loaded, std::memory_order_release);

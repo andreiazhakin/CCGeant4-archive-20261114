@@ -3,6 +3,7 @@
 
 #include "G4VDiscreteProcess.hh"
 #include "G4ParticleChangeForLoss.hh"
+#include <vector>
 
 class G4VEmAngularDistribution;
 
@@ -61,6 +62,18 @@ class G4CCIonDeltaElectronProcess : public G4VDiscreteProcess
                              G4double globalWeight,
                              G4bool useMott) const;
 
+  G4double CrossSectionUpperBound(const G4Track&, G4double low, G4double high) const;
+  G4double CandidateCrossSection(const G4Track&);
+  struct Envelope {
+    const G4ParticleDefinition* particle;
+    const G4MaterialCutsCouple* couple;
+    G4double cut;
+    G4int electrons, mottZ;
+    G4double minimum;
+    std::vector<G4double> energies, bounds;
+  };
+  std::vector<Envelope> fEnvelopes;
+  G4double fCandidateCrossSection=0.;
   G4ParticleChangeForLoss fParticleChange;
   G4VEmAngularDistribution* fAngularDistribution = nullptr;
 };

@@ -508,6 +508,31 @@ std::array<G4double,3> G4CCDiracTable::DeltaMoments(G4int z,G4int n,G4double ene
   return result;
 }
 
+G4double G4CCDiracTable::DeltaCrossSectionUpperBound(G4int z,G4int n,
+  G4double energyLow,G4double energyHigh,G4double cut,
+  G4double maximumLow,G4double maximumHigh) const
+{
+  CheckQuery(n,cut);Validate();
+  const auto& projectile=fData->Get(z);
+  const auto low=FindBracket(projectile,energyLow);
+  const auto high=FindBracket(projectile,energyHigh);
+  const double topLow=QueryMaximum(energyLow,maximumLow);
+  const double topHigh=QueryMaximum(energyHigh,maximumHigh);
+  if(cut>=topHigh) {return 0.;}
+  const int nn=std::min(n,projectile.nmax);
+  double bound=0.;
+  for(const auto* node=low.lo;node<=high.hi;++node) {
+    double value=MappedNode(*node,nn,topHigh).Tail(std::max(cut,kT0))[0];
+    if(cut<kT0) {
+      const MappedNode mapped(*node,nn,topLow);
+      const double slope=std::min(0.,mapped.FirstSlope());
+      value+=(kT0-cut)*mapped.FirstDensity()*std::exp(slope*std::log(cut/kT0));
+    }
+    bound=std::max(bound,value);
+  }
+  return bound*ScaleForN(z,n,projectile.nmax)*(1.+1.e-12);
+}
+
 G4double G4CCDiracTable::DeltaDensity(G4int z,G4int n,G4double energy,G4double t,
                                      G4double maximum) const
 {

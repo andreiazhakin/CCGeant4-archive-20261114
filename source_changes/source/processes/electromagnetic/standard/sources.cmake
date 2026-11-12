@@ -238,3 +238,7 @@ geant4_module_link_libraries(G4emstandard
     G4ions
     G4mesons
     ${G4ZLIB_LIBRARIES})
+
+# The hadronic subtype enum has no library symbols; only its header is needed.
+geant4_module_include_directories(G4emstandard PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../../hadronic/management/include>)

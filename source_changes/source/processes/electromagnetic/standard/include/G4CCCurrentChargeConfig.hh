@@ -38,7 +38,6 @@ class G4CCCurrentChargeConfig
   void SetAtimaQDedxTablePath(const G4String& path);
 
   G4bool UseAtimaQDedxTable() const;
-  void SetUseAtimaQDedxTable(G4bool value);
 
   G4bool UseAtimaEquilibriumDedx() const;
 
@@ -96,7 +95,6 @@ class G4CCCurrentChargeMessenger : public G4UImessenger
   G4UIdirectory* fDirectory = nullptr;
   G4UIcmdWithAString* fTableCmd = nullptr;
   G4UIcmdWithAString* fAtimaQDedxTableCmd = nullptr;
-  G4UIcmdWithABool* fUseAtimaQDedxTableCmd = nullptr;
   G4UIcmdWithADouble* fExponentCmd = nullptr;
   G4UIcmdWithABool* fUseMottDeltaCmd = nullptr;
   G4UIcmdWithABool* fDisableLSCmd = nullptr;

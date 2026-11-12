@@ -246,6 +246,18 @@
     {
       "path": "source/processes/electromagnetic/utils/src/G4EmCalculator.cc",
       "status": "modified"
+    },
+    {
+      "path": "source/processes/hadronic/management/include/G4HadronicProcess.hh",
+      "status": "modified"
+    },
+    {
+      "path": "source/processes/hadronic/management/src/G4HadronicProcess.cc",
+      "status": "modified"
+    },
+    {
+      "path": "source/processes/management/include/G4VProcess.hh",
+      "status": "modified"
     }
   ]
 }

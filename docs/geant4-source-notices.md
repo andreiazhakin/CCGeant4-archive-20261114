@@ -12,7 +12,7 @@ authored CCGeant4 work is described in the [licensing statement](../LICENSING.md
 
 ## Code from Geant4 11.4.0
 
-The patch and `source_changes/` contain the same 8 modified upstream files
+The patch and `source_changes/` contain the same 11 modified upstream files
 and 53 added paths. The [file manifest](../patches/BASE.json) lists
 these paths. Added paths can also contain
 adaptations of upstream code. The examples below identify the origins of
@@ -24,7 +24,7 @@ specific parts of the implementation.
 | `G4CCLindhardSorensenIonModel.cc` | Adapts the Geant4 ion model by Alexander Bagulya and Vladimir Ivanchenko. This includes projectile parameter setup and parts of `SampleSecondaries`, including energy and direction sampling and the primary momentum update. |
 | `G4CCBetheBlochModel.cc` and `G4CCIonDeltaElectronProcess.cc` | Use portions of the projectile form-factor calculation in `G4BetheBlochModel`, credited to Vladimir Ivanchenko, based on code by Laszlo Urban. The CC Bethe–Bloch branch also adapts the restricted stopping calculation. |
 | `G4CCTabulatedIonScatteringModel.cc` | The source identifies the target-selection and recoil treatment as an adaptation of `G4IonCoulombScatteringModel`. It delegates the fallback cross section and angular law to Geant4. The upstream scattering model and `G4IonCoulombCrossSection` credit Cristina Consolandi. |
-| Direct modifications to Geant4 | The original headers credit Laszlo Urban for `G4UrbanMscModel`, Vladimir Ivanchenko for `G4EmCalculator` and `G4PhysListFactory`, Vladimir Ivanchenko based on Laszlo Urban's code for `G4VEnergyLossProcess`, and R. Hatcher for `G4RegisterPhysLists.icc`. The other three modified paths are upstream CMake files. |
+| Direct modifications to Geant4 | The original headers credit Laszlo Urban for `G4UrbanMscModel`, Vladimir Ivanchenko for `G4EmCalculator` and `G4PhysListFactory`, Vladimir Ivanchenko based on Laszlo Urban's code for `G4VEnergyLossProcess`, and R. Hatcher for `G4RegisterPhysLists.icc`. The modified `G4VProcess.hh` credits G. Cosmo and H. Kurashige; `G4HadronicProcess.{hh,cc}` credit H. P. Wellisch and J. L. Chuma. The other three modified paths are upstream CMake files. |
 
 [Upstream electromagnetic models](https://gitlab.cern.ch/geant4/geant4/-/tree/v11.4.0/source/processes/electromagnetic/standard) ·
 [Upstream electromagnetic utilities](https://gitlab.cern.ch/geant4/geant4/-/tree/v11.4.0/source/processes/electromagnetic/utils) ·

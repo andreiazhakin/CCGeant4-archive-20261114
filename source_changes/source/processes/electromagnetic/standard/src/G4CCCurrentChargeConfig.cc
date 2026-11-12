@@ -167,8 +167,6 @@ G4CCCurrentChargeConfig::G4CCCurrentChargeConfig()
   const char* atimaDedx = std::getenv("G4CC_ATIMA_Q_DEDX_TABLE");
   if(atimaDedx == nullptr) { atimaDedx = std::getenv("G4CC_ATIMA_DEDX_TABLE"); }
   if(atimaDedx != nullptr) { fAtimaQDedxTablePath = atimaDedx; }
-  fUseAtimaQDedxTable = G4CCConfigEnvFlag("G4CC_USE_ATIMA_Q_DEDX", true);
-  fUseAtimaEquilibriumDedx = G4CCConfigEnvFlag("G4CC_USE_ATIMA_EQUILIBRIUM_DEDX", true);
 
   fUseMottDeltaElectrons = G4CCConfigEnvFlag("G4CC_USE_MOTT_DELTA", true);
 
@@ -179,8 +177,7 @@ G4CCCurrentChargeConfig::G4CCCurrentChargeConfig()
     G4Exception("G4CCCurrentChargeConfig::G4CCCurrentChargeConfig", "CCConfig001",
                 FatalException,
                 "Equilibrium ATIMA stopping requires G4CC_USE_MOTT_DELTA=1 and "
-                "G4CC_MOTT_MIN_ENERGY_MEV_U <= 2. Set "
-                "G4CC_USE_ATIMA_EQUILIBRIUM_DEDX=0 for the legacy diagnostic mode.");
+                "G4CC_MOTT_MIN_ENERGY_MEV_U <= 2.");
   }
 
   const auto& globalWeight = G4CCGlobalWeightRuntime();
@@ -189,8 +186,7 @@ G4CCCurrentChargeConfig::G4CCCurrentChargeConfig()
     G4Exception("G4CCCurrentChargeConfig::G4CCCurrentChargeConfig", "CCConfig003",
                 FatalException,
                 "Equilibrium ATIMA stopping requires smooth GLOBAL weighting and "
-                "G4CC_GLOBAL_WEIGHT_LOW0_MEV_U=30, G4CC_GLOBAL_WEIGHT_LOW1_MEV_U=40. "
-                "Set G4CC_USE_ATIMA_EQUILIBRIUM_DEDX=0 for legacy weighting diagnostics.");
+                "G4CC_GLOBAL_WEIGHT_LOW0_MEV_U=30, G4CC_GLOBAL_WEIGHT_LOW1_MEV_U=40.");
   }
 
   const char* disableLS = std::getenv("G4CC_DISABLE_CONTINUOUS_LS_FOR_MOTT_DELTA");
@@ -313,13 +309,6 @@ G4bool G4CCCurrentChargeConfig::UseAtimaQDedxTable() const
   return fUseAtimaQDedxTable;
 }
 
-void G4CCCurrentChargeConfig::SetUseAtimaQDedxTable(G4bool value)
-{
-  CheckLegacyMutation("SetUseAtimaQDedxTable");
-  G4CCAtimaQDedxTable::Instance().SetUseTable(value);
-  fUseAtimaQDedxTable = value;
-}
-
 G4bool G4CCCurrentChargeConfig::UseAtimaEquilibriumDedx() const
 {
   return fUseAtimaEquilibriumDedx;
@@ -356,8 +345,7 @@ void G4CCCurrentChargeConfig::SetUseMottDeltaElectrons(G4bool value)
   if(fUseAtimaEquilibriumDedx && !value) {
     G4Exception("G4CCCurrentChargeConfig::SetUseMottDeltaElectrons", "CCConfig002",
                 FatalException,
-                "Cannot disable Mott delta electrons in equilibrium ATIMA mode. "
-                "Select G4CC_USE_ATIMA_EQUILIBRIUM_DEDX=0 before startup for legacy diagnostics.");
+                "Cannot disable Mott delta electrons in equilibrium ATIMA mode.");
     return;
   }
   fUseMottDeltaElectrons = value;
@@ -462,13 +450,6 @@ G4CCCurrentChargeMessenger::G4CCCurrentChargeMessenger(G4CCCurrentChargeConfig* 
   fAtimaQDedxTableCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
   fAtimaQDedxTableCmd->SetToBeBroadcasted(false);
 
-  fUseAtimaQDedxTableCmd = new G4UIcmdWithABool("/currentCharge/useAtimaQDedxTable", this);
-  fUseAtimaQDedxTableCmd->SetGuidance("Use ATIMA/GLOBAL q-scaled table for current-charge continuous loss in the GLOBAL domain.");
-  fUseAtimaQDedxTableCmd->SetParameterName("use", false);
-  fUseAtimaQDedxTableCmd->SetDefaultValue(true);
-  fUseAtimaQDedxTableCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
-  fUseAtimaQDedxTableCmd->SetToBeBroadcasted(false);
-
   fExponentCmd = new G4UIcmdWithADouble("/currentCharge/screeningExponent", this);
   fExponentCmd->SetGuidance("Set exponent a in f(x)=1/(1+x^a) for delta-electron screening.");
   fExponentCmd->SetParameterName("a", false);
@@ -507,7 +488,6 @@ G4CCCurrentChargeMessenger::~G4CCCurrentChargeMessenger()
   delete fDisableLSCmd;
   delete fUseMottDeltaCmd;
   delete fExponentCmd;
-  delete fUseAtimaQDedxTableCmd;
   delete fAtimaQDedxTableCmd;
   delete fTableCmd;
   delete fDirectory;
@@ -519,8 +499,6 @@ void G4CCCurrentChargeMessenger::SetNewValue(G4UIcommand* command, G4String valu
     fConfig->SetTablePath(value);
   } else if(command == fAtimaQDedxTableCmd) {
     fConfig->SetAtimaQDedxTablePath(value);
-  } else if(command == fUseAtimaQDedxTableCmd) {
-    fConfig->SetUseAtimaQDedxTable(fUseAtimaQDedxTableCmd->GetNewBoolValue(value));
   } else if(command == fExponentCmd) {
     fConfig->SetScreeningExponent(fExponentCmd->GetNewDoubleValue(value));
   } else if(command == fUseMottDeltaCmd) {

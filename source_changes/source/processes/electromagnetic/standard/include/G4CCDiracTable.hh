@@ -24,6 +24,9 @@ class G4CCDiracTable
 
   std::array<G4double, 3> DeltaMoments(G4int z, G4int n, G4double energyMeVPerU,
                                       G4double cutMeV, G4double maximumTransferMeV = 0.) const;
+  G4double DeltaCrossSectionUpperBound(G4int z, G4int n,
+    G4double energyLow, G4double energyHigh, G4double cutMeV,
+    G4double maximumTransferLowMeV, G4double maximumTransferHighMeV) const;
   G4double DeltaDensity(G4int z, G4int n, G4double energyMeVPerU,
                         G4double transferMeV, G4double maximumTransferMeV = 0.) const;
   G4double SampleDelta(G4int z, G4int n, G4double energyMeVPerU,

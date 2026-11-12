@@ -20,9 +20,6 @@ class G4CCAtimaQDedxTable
   const G4String& Path() const;
   void SetPath(const G4String& path);
 
-  G4bool UseTable() const;
-  void SetUseTable(G4bool value);
-
   G4bool IsLoaded() const;
   G4bool IsAvailable() const;
 
@@ -59,7 +56,6 @@ class G4CCAtimaQDedxTable
   static long Key(G4int zProjectile, G4int zTarget);
 
   G4String fPath;
-  std::atomic<G4bool> fUseTable{true};
 
   mutable std::atomic<G4bool> fLoadAttempted{false};
   mutable std::atomic<G4bool> fLoaded{false};

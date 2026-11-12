@@ -31,6 +31,9 @@ class G4CCMottCorrection
   static G4double MaxRMott(G4int zProjectile, G4double beta,
                            G4double tMin, G4double tMax);
 
+  static G4double MaxRMott(G4int zProjectile, G4double betaLow,
+                           G4double betaHigh, G4double tMin, G4double tMax);
+
  private:
   static constexpr G4double betaBar = 0.7181228;
 };

@@ -15,6 +15,7 @@
 #include "G4DynamicParticle.hh"
 #include "G4Electron.hh"
 #include "G4EmCorrections.hh"
+#include "G4EmParameters.hh"
 #include "G4ForceCondition.hh"
 #include "G4Material.hh"
 #include "G4IonisParamMat.hh"
@@ -38,6 +39,7 @@
 #include <cstdlib>
 #include <iterator>
 #include <string>
+#include <utility>
 
 
 namespace
@@ -276,7 +278,18 @@ G4double G4CCEffectiveChargeSquareForDelta(const G4Track& track)
   return G4CCIonChargeState::EffectiveChargeSquare(track);
 }
 
-G4int G4CCChooseMottZ(const G4Track& track, G4int zProjectile)
+G4double G4CCEffectiveChargeSquareAtEnergy(const G4Track& track, G4double energy)
+{
+  auto* corrections=G4LossTableManager::Instance()->EmCorrections();
+  if(corrections==nullptr) {return G4CCIonChargeState::CurrentChargeSquare(track);}
+  const auto* particle=track.GetParticleDefinition();
+  const auto* material=track.GetMaterial();
+  corrections->GetParticleCharge(particle,material,energy);
+  const auto q2=corrections->EffectiveChargeSquareRatio(particle,material,energy);
+  return q2>0. ? q2 : G4CCIonChargeState::CurrentChargeSquare(track);
+}
+
+G4int G4CCChooseMottZ(const G4Track& track, G4int zProjectile, G4double energy)
 {
   if(zProjectile <= 0) { return 0; }
 
@@ -286,7 +299,7 @@ G4int G4CCChooseMottZ(const G4Track& track, G4int zProjectile)
   if(mode == "effective" || mode == "eff" || mode == "qeff") {
     const G4double zeff = G4CCEffectiveChargeInEplus(track.GetParticleDefinition(),
                                                      track.GetMaterial(),
-                                                     track.GetKineticEnergy());
+                                                     energy);
     if(zeff > 0.0) { z = zeff; }
   } else if(mode == "current" || mode == "qcurrent" || mode == "ionic") {
     z = std::abs(track.GetDynamicParticle()->GetCharge()/CLHEP::eplus);
@@ -301,6 +314,11 @@ G4int G4CCChooseMottZ(const G4Track& track, G4int zProjectile)
     zInt = zProjectile;
   }
   return zInt;
+}
+
+G4int G4CCChooseMottZ(const G4Track& track, G4int zProjectile)
+{
+  return G4CCChooseMottZ(track,zProjectile,track.GetKineticEnergy());
 }
 
 G4double G4CCBlendedDeltaChargeSquare(G4int Zp, G4int Qe, G4double deltaEnergy,
@@ -586,11 +604,16 @@ G4double G4CCIonDeltaElectronProcess::ElectronProductionCut(const G4MaterialCuts
 
 G4double G4CCIonDeltaElectronProcess::CrossSectionPerVolume(const G4Track& track) const
 {
+  return CrossSectionPerVolume(track,track.GetKineticEnergy(),false);
+}
+
+G4double G4CCIonDeltaElectronProcess::CrossSectionPerVolume(
+  const G4Track& track, G4double kineticEnergy, G4bool analyticOnly) const
+{
   const auto* particle = track.GetParticleDefinition();
   const auto* material = track.GetMaterial();
   if(!G4CCIonChargeState::IonisationModelApplies(particle, material)) { return 0.0; }
 
-  const G4double kineticEnergy = track.GetKineticEnergy();
   const G4double tMax = MaxSecondaryEnergy(particle, kineticEnergy);
   const G4double tCut = ElectronProductionCut(track.GetMaterialCutsCouple());
   if(tMax <= tCut || tCut <= 0.0) { return 0.0; }
@@ -601,22 +624,23 @@ G4double G4CCIonDeltaElectronProcess::CrossSectionPerVolume(const G4Track& track
   if(beta2 <= 0.0) { return 0.0; }
 
   const G4int Zp = G4CCIonChargeState::GetZp(particle);
-  const G4int zMott = G4CCChooseMottZ(track, Zp);
+  const G4int zMott = G4CCChooseMottZ(track, Zp, kineticEnergy);
   const G4int Qe = G4CCIonChargeState::GetQe(track);
   const G4double spin = particle->GetPDGSpin();
-  const G4double eMeVPerU = G4CCIonChargeState::KineticEnergyPerNucleon(track)/CLHEP::MeV;
+  const G4double eMeVPerU = G4CCIonChargeState::KineticEnergyPerNucleon(particle,kineticEnergy)/CLHEP::MeV;
   if(!G4CCCurrentChargeConfig::UseCCDeltaAtEnergy(eMeVPerU)) {
     return 0.0;
   }
   const G4double globalWeight = G4CCCurrentChargeConfig::GlobalTransitionWeight(eMeVPerU);
-  const G4double qEffective2 = G4CCEffectiveChargeSquareForDelta(track);
+  const G4double qEffective2 = G4CCEffectiveChargeSquareAtEnergy(track,kineticEnergy);
   const G4bool useMott = G4CCUseMottDeltaElectronsAtEnergy(eMeVPerU)
     && G4CCMottCorrection::IsAvailable(zMott);
   if(G4CCCurrentChargeConfig::Instance().IsDiracMode()) {
     G4CCDiracPhysics::CheckCut(tCut);
-    const G4double native = globalWeight < 1. ?
+    const G4double native = analyticOnly || globalWeight < 1. ?
       NumericalIntegral(Zp,zMott,Qe,tCut,tMax,beta2,totalEnergy*totalEnergy,spin,
                         qEffective2,0.,useMott)*twopi_mc2_rcl2/beta2 : 0.;
+    if(analyticOnly) {return material->GetElectronDensity()*native;}
     const G4double tab = globalWeight > 0. ?
       G4CCDiracPhysics::Moments(particle,Qe,kineticEnergy,tCut)[0]*cm2 : 0.;
     return material->GetElectronDensity()*(globalWeight*tab+(1.-globalWeight)*native);
@@ -625,7 +649,7 @@ G4double G4CCIonDeltaElectronProcess::CrossSectionPerVolume(const G4Track& track
                                               totalEnergy*totalEnergy, spin,
                                               qEffective2, globalWeight, useMott);
 
-  if(G4CCMottDiagnosticsEnabled()) {
+  if(!analyticOnly && G4CCMottDiagnosticsEnabled()) {
     const G4int n = gMottIntegralDiagnosticPrints.fetch_add(1);
     if(n < 20) {
       const G4double bornIntegral = G4CCDeltaIntegralMode(Zp, zMott, Qe, tCut, tMax, beta2,
@@ -657,95 +681,158 @@ G4double G4CCIonDeltaElectronProcess::CrossSectionPerVolume(const G4Track& track
   return material->GetElectronDensity()*twopi_mc2_rcl2*integral/beta2;
 }
 
-G4double G4CCIonDeltaElectronProcess::CrossSectionUpperBound(
-  const G4Track& track,G4double low,G4double high) const
+G4double G4CCIonDeltaElectronProcess::AnalyticCrossSectionUpperBound(
+  const G4Track& track,G4double low,G4double high)
 {
-  const auto* p=track.GetParticleDefinition();
-  const auto* material=track.GetMaterial();
-  const double cut=ElectronProductionCut(track.GetMaterialCutsCouple());
-  const double top=MaxSecondaryEnergy(p,high);
-  if(top<=cut) {return 0.;}
-  const double mass=p->GetPDGMass();
-  const auto beta=[mass](double e) {return std::sqrt(e*(e+2.*mass))/ (e+mass);};
-  const double betaLow=beta(low),betaHigh=beta(high);
-  const int z=G4CCIonChargeState::GetZp(p),n=G4CCIonChargeState::GetQe(track);
-  const double euLow=G4CCIonChargeState::KineticEnergyPerNucleon(p,low)/MeV;
-  const double euHigh=G4CCIonChargeState::KineticEnergyPerNucleon(p,high)/MeV;
-  double wLow=G4CCCurrentChargeConfig::GlobalTransitionWeight(euLow);
-  double wHigh=G4CCCurrentChargeConfig::GlobalTransitionWeight(euHigh);
-  double wMin=std::min(wLow,wHigh),wMax=std::max(wLow,wHigh);
-  for(double knot:{G4CCCurrentChargeConfig::Low0MeVPerU(),
-                   G4CCCurrentChargeConfig::Low1MeVPerU(),
-                   G4CCCurrentChargeConfig::High0MeVPerU(),
-                   G4CCCurrentChargeConfig::High1MeVPerU()}) {
-    if(knot>euLow && knot<euHigh) {
-      const double w=G4CCCurrentChargeConfig::GlobalTransitionWeight(knot);
-      wMin=std::min(wMin,w); wMax=std::max(wMax,w);
+  const auto* particle=track.GetParticleDefinition();
+  const auto* couple=track.GetMaterialCutsCouple();
+  const double cut=ElectronProductionCut(couple);
+  const int n=G4CCIonChargeState::GetQe(track);
+  const int charge=static_cast<int>(std::lround(
+    std::abs(track.GetDynamicParticle()->GetCharge()/eplus)));
+  auto found=std::find_if(fEnvelopes.begin(),fEnvelopes.end(),[&](const Envelope& e) {
+    return e.particle==particle && e.couple==couple && e.cut==cut &&
+           e.electrons==n && e.charge==charge;
+  });
+  const double unitEnergy=MeV/(G4CCIonChargeState::KineticEnergyPerNucleon(particle,MeV)/MeV);
+  const double r=electron_mass_c2/particle->GetPDGMass(),s=cut/electron_mass_c2;
+  const double x=0.5*s*(1.+r*r)+0.25*s*s*r*r;
+  const double threshold=particle->GetPDGMass()*(0.5*s*r+x/(std::sqrt(1.+x)+1.));
+  const double minimum=std::max(threshold,2.*unitEnergy);
+  if(high<=minimum) {return 0.;}
+  low=std::max(low,minimum);
+  if(found==fEnvelopes.end() || found->maximum<high) {
+    const auto* parameters=G4EmParameters::Instance();
+    const double maximum=std::max(high,parameters->MaxKinEnergy());
+    const int bins=std::max(20,parameters->NumberOfBinsPerDecade());
+    const int count=std::max(1,static_cast<int>(std::ceil(bins*std::log10(maximum/minimum))));
+    std::vector<double> energies;
+    energies.reserve(static_cast<std::size_t>(count)+16);
+    for(int i=0;i<=count;++i) {
+      energies.push_back(i==count ? maximum : minimum*std::pow(maximum/minimum,
+        static_cast<double>(i)/count));
     }
-  }
-  const bool dirac=G4CCCurrentChargeConfig::Instance().IsDiracMode();
-  double tab=0.;
-  if(dirac && wMax>0.) {
-    auto& tables=G4CCDiracPhysics::Tables();
-    const double a=std::max({euLow,tables.EnergyMin(),G4CCCurrentChargeConfig::Low0MeVPerU()});
-    const double b=std::min({euHigh,tables.EnergyMax(),G4CCCurrentChargeConfig::High1MeVPerU()});
-    if(a<=b) {
-      const auto bound=[&](int electrons) {
-        return tables.DeltaCrossSectionUpperBound(z,electrons,a,b,cut/MeV,
-          MaxSecondaryEnergy(p,low*a/euLow)/MeV,
-          MaxSecondaryEnergy(p,high*b/euHigh)/MeV)*cm2;
+    for(double knot:{G4CCCurrentChargeConfig::Low0MeVPerU(),
+                     G4CCCurrentChargeConfig::Low1MeVPerU(),
+                     G4CCCurrentChargeConfig::High0MeVPerU(),
+                     G4CCCurrentChargeConfig::High1MeVPerU(),
+                     G4CCCurrentChargeConfig::MottMinimumEnergyMeVPerU()}) {
+      const double energy=knot*unitEnergy;
+      if(energy>minimum && energy<maximum) {
+        energies.push_back(energy);
+        energies.push_back(energy*(1.-1.e-12));
+        energies.push_back(energy*(1.+1.e-12));
+      }
+    }
+    std::sort(energies.begin(),energies.end());
+    energies.erase(std::unique(energies.begin(),energies.end()),energies.end());
+    const bool dirac=G4CCCurrentChargeConfig::Instance().IsDiracMode();
+    const auto active=[&](double energy) {
+      return !dirac || energy<=G4CCCurrentChargeConfig::Low1MeVPerU()*unitEnergy ||
+                       energy>=G4CCCurrentChargeConfig::High0MeVPerU()*unitEnergy;
+    };
+    const auto mode=G4CCMottZMode();
+    if(mode=="effective" || mode=="eff" || mode=="qeff") {
+      const auto effective=[&](double energy) {
+        return G4CCEffectiveChargeInEplus(particle,track.GetMaterial(),energy);
       };
-      tab=bound(0);
-      if(n>0 && n<=27) tab=std::max(tab,bound(n));
+      std::vector<double> jumps;
+      for(std::size_t i=1;i<energies.size();++i) {
+        if(!active(energies[i-1]) && !active(energies[i])) {continue;}
+        const double q0=effective(energies[i-1]),q1=effective(energies[i]);
+        const double qmin=std::min(q0,q1),qmax=std::max(q0,q1);
+        for(double q=std::floor(qmin+0.5)+0.5;q<qmax;q+=1.) {
+          if(q<0.5 || q>92.5) {continue;}
+          double a=energies[i-1],b=energies[i];
+          for(int j=0;j<32;++j) {
+            const double middle=0.5*(a+b);
+            if((effective(middle)<q)==(q0<q)) {a=middle;} else {b=middle;}
+          }
+          jumps.push_back(a);
+          jumps.push_back(b);
+        }
+      }
+      energies.insert(energies.end(),jumps.begin(),jumps.end());
+      std::sort(energies.begin(),energies.end());
+      energies.erase(std::unique(energies.begin(),energies.end()),energies.end());
     }
+    std::vector<double> rates;
+    rates.reserve(energies.size());
+    for(double energy:energies) {
+      rates.push_back(active(energy) ? CrossSectionPerVolume(track,energy,true) : 0.);
+    }
+    Envelope envelope{particle,couple,cut,charge,n,maximum,{}, {}};
+    for(std::size_t i=0;i<energies.size();++i) {
+      if((i==0 || rates[i]>=rates[i-1]) &&
+         (i+1==energies.size() || rates[i]>=rates[i+1])) {
+        envelope.energies.push_back(energies[i]);
+        envelope.bounds.push_back(rates[i]);
+      }
+    }
+    if(found==fEnvelopes.end()) {
+      fEnvelopes.push_back(std::move(envelope));
+      found=std::prev(fEnvelopes.end());
+    } else {*found=std::move(envelope);}
   }
-  double native=0.;
-  if(!dirac || wMin<1.) {
-    double shape=1.;
-    if(p->GetPDGSpin()==0.5) shape+=0.5*top*top/((low+mass)*(low+mass));
-    const int zMax=std::min(92,std::max(z,G4CCChooseMottZ(track,z)));
-    for(int zm=1;zm<=zMax;++zm)
-      shape=std::max(shape,G4CCMottCorrection::MaxRMott(zm,betaLow,betaHigh,cut,top));
-    const double targetZ=material->GetIonisation()->GetZeffective();
-    const double qBound=z+(0.18+0.0015*targetZ)/z;
-    const double h=std::log(top/cut)/96.;
-    const double quadrature=h<1.e-5 ? 1.+std::pow(h,4)/2880. :
-      h*(1.+4.*std::exp(-0.5*h)+std::exp(-h))/(-6.*std::expm1(-h));
-    native=twopi_mc2_rcl2*qBound*qBound/(betaLow*betaLow)*shape*
-      (top-cut)/(cut*top)*quadrature;
+  double bound=std::max(CrossSectionPerVolume(track,low,true),
+                        CrossSectionPerVolume(track,high,true));
+  auto i=std::lower_bound(found->energies.begin(),found->energies.end(),low)-found->energies.begin();
+  for(;i<static_cast<std::ptrdiff_t>(found->energies.size()) && found->energies[i]<=high;++i) {
+    bound=std::max(bound,found->bounds[i]);
   }
-  return material->GetElectronDensity()*(dirac ? wMax*tab+(1.-wMin)*native : native)*(1.+1.e-10);
+  return bound*1.05;
 }
 
 G4double G4CCIonDeltaElectronProcess::CandidateCrossSection(const G4Track& track)
 {
-  const auto* p=track.GetParticleDefinition();
-  const auto* couple=track.GetMaterialCutsCouple();
-  const double cut=ElectronProductionCut(couple),energy=track.GetKineticEnergy();
-  const int n=G4CCCurrentChargeConfig::Instance().IsDiracMode() ?
-    G4CCIonChargeState::GetQe(track) : 0;
-  const int zMax=std::min(92,std::max(G4CCIonChargeState::GetZp(p),
-                                    G4CCChooseMottZ(track,G4CCIonChargeState::GetZp(p))));
-  auto found=std::find_if(fEnvelopes.begin(),fEnvelopes.end(),[&](const Envelope& e) {
-    return e.particle==p && e.couple==couple && e.cut==cut && e.electrons==n && e.mottZ==zMax;
-  });
-  if(found==fEnvelopes.end()) {
-    const double r=electron_mass_c2/p->GetPDGMass(),s=cut/electron_mass_c2;
-    const double x=0.5*s*(1.+r*r)+0.25*s*s*r*r;
-    const double threshold=p->GetPDGMass()*(0.5*s*r+x/(std::sqrt(1.+x)+1.));
-    const double gate=2.*MeV/(G4CCIonChargeState::KineticEnergyPerNucleon(p,MeV)/MeV);
-    fEnvelopes.push_back({p,couple,cut,n,zMax,std::max(threshold,gate),{}, {}});
-    found=std::prev(fEnvelopes.end());
+  const auto* particle=track.GetParticleDefinition();
+  const double high=track.GetKineticEnergy(),low=0.8*high;
+  const double unitEnergy=MeV/(G4CCIonChargeState::KineticEnergyPerNucleon(particle,MeV)/MeV);
+  const double euLow=low/unitEnergy,euHigh=high/unitEnergy;
+  double bound=0.;
+  if(!G4CCCurrentChargeConfig::Instance().IsDiracMode()) {
+    bound=AnalyticCrossSectionUpperBound(track,low,high);
+  } else {
+    const double wLow=G4CCCurrentChargeConfig::GlobalTransitionWeight(euLow);
+    const double wHigh=G4CCCurrentChargeConfig::GlobalTransitionWeight(euHigh);
+    double wMin=std::min(wLow,wHigh),wMax=std::max(wLow,wHigh);
+    for(double knot:{G4CCCurrentChargeConfig::Low0MeVPerU(),
+                     G4CCCurrentChargeConfig::Low1MeVPerU(),
+                     G4CCCurrentChargeConfig::High0MeVPerU(),
+                     G4CCCurrentChargeConfig::High1MeVPerU()}) {
+      if(knot>euLow && knot<euHigh) {
+        const double w=G4CCCurrentChargeConfig::GlobalTransitionWeight(knot);
+        wMin=std::min(wMin,w);wMax=std::max(wMax,w);
+      }
+    }
+    if(wMax>0.) {
+      auto& tables=G4CCDiracPhysics::Tables();
+      const double a=std::max({euLow,tables.EnergyMin(),G4CCCurrentChargeConfig::Low0MeVPerU()});
+      const double b=std::min({euHigh,tables.EnergyMax(),G4CCCurrentChargeConfig::High1MeVPerU()});
+      if(a<=b) {
+        bound=wMax*track.GetMaterial()->GetElectronDensity()*cm2*
+          tables.DeltaCrossSectionUpperBound(G4CCIonChargeState::GetZp(particle),
+            G4CCIonChargeState::GetQe(track),a,b,
+            ElectronProductionCut(track.GetMaterialCutsCouple())/MeV,
+            MaxSecondaryEnergy(particle,a*unitEnergy)/MeV,
+            MaxSecondaryEnergy(particle,b*unitEnergy)/MeV);
+      }
+    }
+    if(wMin<1.) {
+      double native=0.;
+      const double lowEnd=G4CCCurrentChargeConfig::Low1MeVPerU()*unitEnergy;
+      const double highStart=G4CCCurrentChargeConfig::High0MeVPerU()*unitEnergy;
+      if(low<lowEnd) {
+        native=AnalyticCrossSectionUpperBound(track,low,std::min(high,lowEnd));
+      }
+      if(high>highStart) {
+        native=std::max(native,AnalyticCrossSectionUpperBound(track,std::max(low,highStart),high));
+      }
+      bound+=(1.-wMin)*native;
+    }
   }
-  while(found->energies.empty() || found->energies.back()<energy) {
-    const double low=found->energies.empty() ? found->minimum : found->energies.back();
-    const double high=found->minimum+std::max(0.001*found->minimum,1.25*(low-found->minimum));
-    const double previous=found->bounds.empty() ? 0. : found->bounds.back();
-    found->energies.push_back(high);
-    found->bounds.push_back(std::max(previous,CrossSectionUpperBound(track,low,high)));
-  }
-  const auto i=std::lower_bound(found->energies.begin(),found->energies.end(),energy)-found->energies.begin();
-  return found->bounds[i];
+  G4CCEffectiveChargeSquareForDelta(track);
+  return bound;
 }
 
 G4double G4CCIonDeltaElectronProcess::GetMeanFreePath(const G4Track& track,

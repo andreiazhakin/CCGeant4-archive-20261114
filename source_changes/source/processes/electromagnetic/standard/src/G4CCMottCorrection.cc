@@ -133,43 +133,6 @@ G4double G4CCMottCorrection::CMottVsG4(G4int zProjectile, G4double beta,
   return RMott(zProjectile, beta, deltaEnergy, tMax)/born;
 }
 
-G4double G4CCMottCorrection::MaxRMott(G4int z, G4double betaLow,
-                                      G4double betaHigh, G4double tMin,
-                                      G4double tMax)
-{
-  if(!IsAvailable(z) || betaLow <= 0. || tMax <= tMin) { return 0.; }
-  static constexpr int choose[6][6] = {
-    {1,0,0,0,0,0}, {1,1,0,0,0,0}, {1,2,1,0,0,0},
-    {1,3,3,1,0,0}, {1,4,6,4,1,0}, {1,5,10,10,5,1}};
-  const double beta = 0.5*(betaLow+betaHigh), db=beta-betaBar;
-  const double radius=0.5*(betaHigh-betaLow);
-  double a[5], error[5]{};
-  PolynomialCoefficients(z,beta,a);
-  for(int j=0;j<5;++j) {
-    for(int k=1;k<6;++k) {
-      double derivative=0.;
-      for(int m=k;m<6;++m)
-        derivative+=choose[m][k]*fMottCoef[z][j][m]*std::pow(db,m-k);
-      error[j]+=std::abs(derivative)*std::pow(radius,k);
-    }
-  }
-  const double y0=std::sqrt(2.*tMin/tMax), y1=std::sqrt(2.);
-  double bound=0.;
-  for(int i=0;i<32;++i) {
-    const double lo=y0+(y1-y0)*i/32., hi=y0+(y1-y0)*(i+1)/32.;
-    const double mid=0.5*(lo+hi), half=0.5*(hi-lo);
-    double upper=0.;
-    for(int k=0;k<5;++k) {
-      double coefficient=0.;
-      for(int j=k;j<5;++j) coefficient+=choose[j][k]*a[j]*std::pow(mid,j-k);
-      upper+=(k==0 ? coefficient : std::abs(coefficient)*std::pow(half,k));
-      upper+=error[k]*std::pow(hi,k);
-    }
-    bound=std::max(bound,upper);
-  }
-  return bound*(1.+1.e-12);
-}
-
 G4double G4CCMottCorrection::MaxRMott(G4int zProjectile, G4double beta,
                                       G4double tMin, G4double tMax)
 {

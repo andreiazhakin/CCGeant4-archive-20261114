@@ -3560,7 +3560,7 @@
 +}
 --- /dev/null
 +++ b/source/processes/electromagnetic/standard/src/G4CCDiracPhysics.cc
-@@ -0,0 +1,115 @@
+@@ -0,0 +1,116 @@
 +#include "G4CCDiracPhysics.hh"
 +#include "G4CCDiracTable.hh"
 +#include "G4CCCurrentChargeConfig.hh"
@@ -3621,6 +3621,7 @@
 +  const int z=G4CCIonChargeState::GetZp(p);
 +  if(z<29)return false;
 +  if(!MaterialInDomain(m))return false;
++  if(z<=92 && !Tables().HasProjectile(z))return false;
 +  RequireMaterialCoverage(z,m);
 +  return true;
 +}

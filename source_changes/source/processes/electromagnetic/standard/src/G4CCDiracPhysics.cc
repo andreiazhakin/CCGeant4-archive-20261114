@@ -58,6 +58,7 @@ G4bool Applies(const G4ParticleDefinition* p,const G4Material* m) {
   const int z=G4CCIonChargeState::GetZp(p);
   if(z<29)return false;
   if(!MaterialInDomain(m))return false;
+  if(z<=92 && !Tables().HasProjectile(z))return false;
   RequireMaterialCoverage(z,m);
   return true;
 }

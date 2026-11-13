@@ -5312,7 +5312,7 @@
 +}
 --- /dev/null
 +++ b/source/processes/electromagnetic/standard/src/G4CCIonDeltaElectronProcess.cc
-@@ -0,0 +1,1072 @@
+@@ -0,0 +1,1067 @@
 +#include "G4CCIonDeltaElectronProcess.hh"
 +
 +#include "G4CCIonChargeState.hh"
@@ -6219,11 +6219,6 @@
 +
 +  const G4double sigma=CrossSectionPerVolume(track);
 +  if(sigma<=0. || fCandidateCrossSection<=0.) {return &fParticleChange;}
-+  if(sigma>fCandidateCrossSection*(1.+1.e-10)) {
-+    G4Exception("G4CCIonDeltaElectronProcess::PostStepDoIt","CCDeltaMajorant",FatalException,
-+                "The delta-electron cross section exceeds its sampled upper bound.");
-+    return &fParticleChange;
-+  }
 +  if(G4UniformRand()*fCandidateCrossSection>=sigma) {return &fParticleChange;}
 +
 +  const auto* particle = track.GetParticleDefinition();
@@ -9327,6 +9322,40 @@
    G4ParticleChangeForLoss     fParticleChange;
    const G4Material*           currentMaterial = nullptr;
    const G4MaterialCutsCouple* currentCouple = nullptr;
+@@ -473,6 +478,7 @@
+   G4double chargeSqRatio = 1.0;
+   G4double fRange = 0.0;
+   G4double fRangeEnergy = 0.0;
++  G4double fRangeReduceFactor = 1.0;
+ 
+ protected:
+ 
+@@ -621,9 +627,11 @@
+   //G4cout << "G4VEnergyLossProcess::GetScaledRange: Idx= " 
+   //         << basedCoupleIndex << " E(MeV)= " << e 
+   //         << " lastIdx= " << lastIdx << "  " << theRangeTableForLoss << G4endl; 
+-  if(currentCoupleIndex != coupleIdxRange || fRangeEnergy != e) {
++  if(currentCoupleIndex != coupleIdxRange || fRangeEnergy != e ||
++     fRangeReduceFactor != reduceFactor) {
+     coupleIdxRange = currentCoupleIndex;
+     fRangeEnergy = e;
++    fRangeReduceFactor = reduceFactor;
+     fRange = reduceFactor*((*theRangeTableForLoss)[basedCoupleIndex])->Value(e, idxRange);
+     if (fRange < 0.0) { fRange = 0.0; }
+     else if (e < minKinEnergy) { fRange *= std::sqrt(e/minKinEnergy); }
+@@ -640,9 +648,11 @@
+   //G4cout << "G4VEnergyLossProcess::GetScaledRange: Idx= " 
+   //         << basedCoupleIndex << " E(MeV)= " << e 
+   //         << " lastIdx= " << lastIdx << "  " << theRangeTableForLoss << G4endl; 
+-  if(currentCoupleIndex != coupleIdxRange || fRangeEnergy != e) {
++  if(currentCoupleIndex != coupleIdxRange || fRangeEnergy != e ||
++     fRangeReduceFactor != reduceFactor) {
+     coupleIdxRange = currentCoupleIndex;
+     fRangeEnergy = e;
++    fRangeReduceFactor = reduceFactor;
+     fRange = reduceFactor*((*theRangeTableForLoss)[basedCoupleIndex])->LogVectorValue(e, loge);
+     if (fRange < 0.0) { fRange = 0.0; }
+     else if (e < minKinEnergy) { fRange *= std::sqrt(e/minKinEnergy); }
 --- a/source/processes/electromagnetic/utils/src/G4EmCalculator.cc
 +++ b/source/processes/electromagnetic/utils/src/G4EmCalculator.cc
 @@ -486,15 +486,11 @@

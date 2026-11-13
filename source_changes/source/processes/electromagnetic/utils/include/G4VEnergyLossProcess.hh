@@ -478,6 +478,7 @@ private:
   G4double chargeSqRatio = 1.0;
   G4double fRange = 0.0;
   G4double fRangeEnergy = 0.0;
+  G4double fRangeReduceFactor = 1.0;
 
 protected:
 
@@ -626,9 +627,11 @@ inline G4double G4VEnergyLossProcess::GetScaledRangeForScaledEnergy(G4double e)
   //G4cout << "G4VEnergyLossProcess::GetScaledRange: Idx= " 
   //         << basedCoupleIndex << " E(MeV)= " << e 
   //         << " lastIdx= " << lastIdx << "  " << theRangeTableForLoss << G4endl; 
-  if(currentCoupleIndex != coupleIdxRange || fRangeEnergy != e) {
+  if(currentCoupleIndex != coupleIdxRange || fRangeEnergy != e ||
+     fRangeReduceFactor != reduceFactor) {
     coupleIdxRange = currentCoupleIndex;
     fRangeEnergy = e;
+    fRangeReduceFactor = reduceFactor;
     fRange = reduceFactor*((*theRangeTableForLoss)[basedCoupleIndex])->Value(e, idxRange);
     if (fRange < 0.0) { fRange = 0.0; }
     else if (e < minKinEnergy) { fRange *= std::sqrt(e/minKinEnergy); }
@@ -645,9 +648,11 @@ G4VEnergyLossProcess::GetScaledRangeForScaledEnergy(G4double e, G4double loge)
   //G4cout << "G4VEnergyLossProcess::GetScaledRange: Idx= " 
   //         << basedCoupleIndex << " E(MeV)= " << e 
   //         << " lastIdx= " << lastIdx << "  " << theRangeTableForLoss << G4endl; 
-  if(currentCoupleIndex != coupleIdxRange || fRangeEnergy != e) {
+  if(currentCoupleIndex != coupleIdxRange || fRangeEnergy != e ||
+     fRangeReduceFactor != reduceFactor) {
     coupleIdxRange = currentCoupleIndex;
     fRangeEnergy = e;
+    fRangeReduceFactor = reduceFactor;
     fRange = reduceFactor*((*theRangeTableForLoss)[basedCoupleIndex])->LogVectorValue(e, loge);
     if (fRange < 0.0) { fRange = 0.0; }
     else if (e < minKinEnergy) { fRange *= std::sqrt(e/minKinEnergy); }

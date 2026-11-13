@@ -904,11 +904,6 @@ G4VParticleChange* G4CCIonDeltaElectronProcess::PostStepDoIt(const G4Track& trac
 
   const G4double sigma=CrossSectionPerVolume(track);
   if(sigma<=0. || fCandidateCrossSection<=0.) {return &fParticleChange;}
-  if(sigma>fCandidateCrossSection*(1.+1.e-10)) {
-    G4Exception("G4CCIonDeltaElectronProcess::PostStepDoIt","CCDeltaMajorant",FatalException,
-                "The delta-electron cross section exceeds its sampled upper bound.");
-    return &fParticleChange;
-  }
   if(G4UniformRand()*fCandidateCrossSection>=sigma) {return &fParticleChange;}
 
   const auto* particle = track.GetParticleDefinition();

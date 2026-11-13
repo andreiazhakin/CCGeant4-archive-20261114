@@ -18,7 +18,6 @@
 #include "G4ParticleTable.hh"
 #include "G4PhysicalConstants.hh"
 #include "G4SystemOfUnits.hh"
-#include "G4Track.hh"
 #include "Randomize.hh"
 
 #include <algorithm>
@@ -33,8 +32,6 @@
 
 namespace tabulated {
 namespace {
-thread_local CollisionRecord lastCollision;
-
 void WarnMissingPair(int zp, int zt) {
   static std::mutex mutex;
   static std::set<std::pair<int,int>> warned;
@@ -148,7 +145,6 @@ struct G4CCTabulatedIonScatteringModel::Impl {
   double recoilThreshold = 0;
   const G4DataVector* cuts = nullptr;
   G4ParticleChangeForGamma* particleChange = nullptr;
-  G4Track* track = nullptr;
   std::unique_ptr<G4IonCoulombScatteringModel> native;
   std::unordered_map<NucleusKey, std::unique_ptr<NucleusState>, NucleusHash> nuclei;
   std::unordered_map<MaterialKey, std::unique_ptr<MaterialState>, MaterialHash> materials;
@@ -296,7 +292,6 @@ void G4CCTabulatedIonScatteringModel::Initialise(const G4ParticleDefinition* par
   impl_->materials.clear();
   impl_->nuclei.clear();
   impl_->lastMaterialState = nullptr;
-  impl_->track = nullptr;
 }
 
 void G4CCTabulatedIonScatteringModel::InitialiseLocal(const G4ParticleDefinition* particle,
@@ -312,7 +307,6 @@ void G4CCTabulatedIonScatteringModel::InitialiseLocal(const G4ParticleDefinition
 }
 
 void G4CCTabulatedIonScatteringModel::StartTracking(G4Track* track) {
-  impl_->track = track;
   if (impl_->native) impl_->native->StartTracking(track);
 }
 
@@ -389,71 +383,10 @@ void G4CCTabulatedIonScatteringModel::SampleSecondaries(
         Fail("G4CCTabulatedIonScatteringModel::SampleSecondaries",
              "Native delegate is not initialised");
       }
-      auto* change = impl_->particleChange;
-      const auto before = secondaries->size();
       impl_->native->SetCurrentCouple(couple);
       impl_->native->SampleSecondaries(secondaries, couple, dp, minimum, maximum);
       const auto* element = impl_->native->GetCurrentElement();
       SetCurrentElement(element);
-      const double missing = std::numeric_limits<double>::quiet_NaN();
-      CollisionRecord record;
-      record.sequence = lastCollision.sequence + 1;
-      record.trackId = impl_->track ? impl_->track->GetTrackID() : -1;
-      record.projectileZ = p->GetAtomicNumber();
-      record.projectileA = p->GetAtomicMass();
-      record.targetZ = element ? element->GetZasInt() : -1;
-      record.targetA = -1;
-      record.targetIsomer = -1;
-      record.nativeDelegated = true;
-      record.recoilCreated = secondaries->size() > before;
-      record.incidentT_MeV = energy / MeV;
-      record.incidentCharge_e = dp->GetCharge() / eplus;
-      record.finalT_MeV = change->GetProposedKineticEnergy() / MeV;
-      record.targetMass_MeV = missing;
-      record.x = record.q2_MeV2 = record.thetaCM_rad = missing;
-      record.momentumResidual_MeV = missing;
-      double recoilEnergy = change->GetLocalEnergyDeposit();
-      G4ThreeVector recoilMomentum;
-      for (auto index = before; index < secondaries->size(); ++index) {
-        recoilEnergy += (*secondaries)[index]->GetKineticEnergy();
-        recoilMomentum += (*secondaries)[index]->GetMomentum();
-      }
-      if (secondaries->size() == before + 1) {
-        const auto* recoil = (*secondaries)[before];
-        record.targetZ = recoil->GetDefinition()->GetAtomicNumber();
-        record.targetA = recoil->GetDefinition()->GetAtomicMass();
-        record.targetIsomer = 0;
-        record.targetMass_MeV = recoil->GetMass() / MeV;
-      } else if (element && element->GetNumberOfIsotopes() == 1) {
-        const auto* isotope = (*element->GetIsotopeVector())[0];
-        record.targetA = isotope->GetN();
-        record.targetIsomer = isotope->Getm();
-        record.targetMass_MeV = impl_->GetNucleus(
-            p, record.targetZ, record.targetA, record.targetIsomer).targetMass / MeV;
-      }
-      record.recoilT_MeV = recoilEnergy / MeV;
-      record.energyResidual_MeV = (energy - change->GetProposedKineticEnergy()
-                                   - recoilEnergy) / MeV;
-      if (record.targetMass_MeV > 0.) {
-        const double m = dp->GetMass();
-        const double M = record.targetMass_MeV * MeV;
-        const double pLab = std::sqrt(energy * (energy + 2 * m));
-        const double s = (m + M) * (m + M) + 2 * M * energy;
-        const double pCM2 = pLab * pLab * M * M / s;
-        const double q2 = 2 * M * recoilEnergy;
-        record.q2_MeV2 = q2 / (MeV * MeV);
-        record.x = std::clamp(q2 / (4 * pCM2), 0., 1.);
-        record.thetaCM_rad = 2 * std::asin(std::sqrt(record.x));
-      }
-      if (record.recoilCreated) {
-        const double m = dp->GetMass();
-        const double finalT = change->GetProposedKineticEnergy();
-        const double finalP = std::sqrt(finalT * (finalT + 2 * m));
-        record.momentumResidual_MeV =
-            (change->GetProposedMomentumDirection() * finalP + recoilMomentum
-             - dp->GetMomentum()).mag() / MeV;
-      }
-      lastCollision = record;
       return;
     }
     const double targetUniform = G4UniformRand() * total;
@@ -508,46 +441,10 @@ void G4CCTabulatedIonScatteringModel::SampleSecondaries(
     change->ProposeLocalEnergyDeposit(localDeposit);
     change->ProposeNonIonizingEnergyDeposit(localDeposit);
 
-    const double finalMomentum = std::sqrt(k.finalKineticEnergy *
-                                            (k.finalKineticEnergy + 2 * projectileMass));
-    const double recoilMomentum = std::sqrt(k.recoilKineticEnergy *
-                                             (k.recoilKineticEnergy + 2 * nucleus.targetMass));
-    const G4ThreeVector physicalPrimary = k.primaryMomentum.mag2() > 0
-        ? k.primaryMomentum.unit() * finalMomentum : G4ThreeVector();
-    const G4ThreeVector physicalRecoil = k.recoilMomentum.mag2() > 0
-        ? k.recoilMomentum.unit() * recoilMomentum : G4ThreeVector();
-    const double incomingMomentum = std::sqrt(energy * (energy + 2 * projectileMass));
-    CollisionRecord record;
-    record.sequence = lastCollision.sequence + 1;
-    record.trackId = impl_->track ? impl_->track->GetTrackID() : -1;
-    record.projectileZ = p->GetAtomicNumber();
-    record.projectileA = p->GetAtomicMass();
-    record.targetZ = nucleus.key.z;
-    record.targetA = nucleus.key.a;
-    record.targetIsomer = nucleus.key.isomer;
-    record.nodeIndex = node;
-    record.tabulated = target.bracket.valid;
-    record.recoilCreated = recoilCreated;
-    record.incidentT_MeV = energy / MeV;
-    record.incidentCharge_e = dp->GetCharge() / eplus;
-    record.x = x;
-    record.q2_MeV2 = k.q2 / (MeV * MeV);
-    record.thetaCM_rad = 2 * std::asin(std::sqrt(x));
-    record.recoilT_MeV = k.recoilKineticEnergy / MeV;
-    record.finalT_MeV = k.finalKineticEnergy / MeV;
-    record.energyResidual_MeV =
-        (energy - k.finalKineticEnergy - k.recoilKineticEnergy) / MeV;
-    record.momentumResidual_MeV =
-        (physicalPrimary + physicalRecoil - G4ThreeVector(0, 0, incomingMomentum)).mag() / MeV;
-    record.targetMass_MeV = nucleus.targetMass / MeV;
-    lastCollision = record;
   } catch (const std::exception& e) {
     Fail("G4CCTabulatedIonScatteringModel::SampleSecondaries", e.what());
   }
 }
-
-const CollisionRecord& G4CCTabulatedIonScatteringModel::LastCollision() { return lastCollision; }
-void G4CCTabulatedIonScatteringModel::ResetThreadDiagnostics() { lastCollision = CollisionRecord{}; }
 
 void G4CCTabulatedIonScatteringModel::ModelDescription(std::ostream& out) const {
   out << "Full-range elastic scattering with tables selected by projectile Z "

@@ -96,9 +96,9 @@ G4String G4CCAtimaEquilibriumDedxTable::SelectPath()
   if(G4CCCurrentChargeConfig::Instance().IsDiracMode())
     return G4CCCurrentChargeConfig::Instance().Options().tables.atimaLow;
   const char* path = std::getenv("G4CC_ATIMA_EQUILIBRIUM_DEDX_TABLE");
-  if(path != nullptr) { return path; }
-  return "C:\\data\\isolator\\calculations\\atima_equilibrium_2_40_20260915\\"
-         "atima141_equilibrium_dedx_Z29_96_Zt1_84_88_96_E2_40.csv";
+  if(path != nullptr && path[0] != '\0') { return path; }
+  InvalidTable("", "Set G4CC_ATIMA_EQUILIBRIUM_DEDX_TABLE to the equilibrium ATIMA CSV "
+    "for Legacy mode (for example, runtime-tables/atima_low.csv).");
 }
 
 G4CCAtimaEquilibriumDedxTable::Data

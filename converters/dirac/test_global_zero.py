@@ -1,7 +1,8 @@
-"""Audit A01: explicit GLOBAL zeros, all interpolation paths and equilibrium.
+"""Test explicit zero GLOBAL rates, interpolation and equilibrium.
 
 Tests edit copies in --report-dir only; production tables are never rewritten.
-The optional baseline source directory must be the unmodified pre-fix snapshot.
+The required --baseline-dir must contain cc_inputs.py and convert.py from the
+unmodified source snapshot used for comparison.
 """
 import argparse
 import copy

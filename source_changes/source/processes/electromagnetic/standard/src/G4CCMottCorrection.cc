@@ -13,6 +13,22 @@ namespace
     if(x > 1.0) { return 1.0; }
     return x;
   }
+
+  inline G4double EvaluateMottPolynomial(const G4double coeff[5],
+                                        G4double deltaEnergy, G4double tMax)
+  {
+    if(deltaEnergy <= 0.0 || tMax <= 0.0) { return 0.0; }
+    const G4double x = Clamp01(deltaEnergy/tMax);
+    const G4double y = std::sqrt(2.0*x);
+
+    G4double yPow = 1.0;
+    G4double result = 0.0;
+    for(G4int j = 0; j <= 4; ++j) {
+      result += coeff[j]*yPow;
+      yPow *= y;
+    }
+    return std::max(0.0, result);
+  }
 }
 
 G4bool G4CCMottCorrection::IsAvailable(G4int zProjectile)
@@ -69,17 +85,7 @@ G4double G4CCMottCorrection::RMott(G4int zProjectile, G4double beta,
   G4double coeff[5];
   if(!PolynomialCoefficients(zProjectile, beta, coeff)) { return 0.0; }
 
-  const G4double x = Clamp01(deltaEnergy/tMax);
-  const G4double y = std::sqrt(2.0*x);
-
-  G4double yPow = 1.0;
-  G4double result = 0.0;
-  for(G4int j = 0; j <= 4; ++j) {
-    result += coeff[j]*yPow;
-    yPow *= y;
-  }
-
-  return std::max(0.0, result);
+  return EvaluateMottPolynomial(coeff,deltaEnergy,tMax);
 }
 
 G4double G4CCMottCorrection::IntegratedRMottOverT2(G4int zProjectile,
@@ -140,6 +146,9 @@ G4double G4CCMottCorrection::MaxRMott(G4int zProjectile, G4double beta,
     return 1.0;
   }
 
+  G4double coeff[5];
+  if(!PolynomialCoefficients(zProjectile, beta, coeff)) { return 1.0; }
+
   G4double maxValue = 1.0;
   constexpr G4int n = 512;
   const G4double u0 = std::log(tMin);
@@ -147,7 +156,7 @@ G4double G4CCMottCorrection::MaxRMott(G4int zProjectile, G4double beta,
   for(G4int i = 0; i <= n; ++i) {
     const G4double u = u0 + (u1 - u0)*static_cast<G4double>(i)/static_cast<G4double>(n);
     const G4double t = std::exp(u);
-    maxValue = std::max(maxValue, RMott(zProjectile, beta, t, tMax));
+    maxValue = std::max(maxValue, EvaluateMottPolynomial(coeff,t,tMax));
   }
 
   return 1.05*maxValue;

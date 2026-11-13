@@ -463,7 +463,7 @@ G4CCCurrentChargeMessenger::G4CCCurrentChargeMessenger(G4CCCurrentChargeConfig* 
   fUseMottDeltaCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
 
   fDisableLSCmd = new G4UIcmdWithABool("/currentCharge/disableContinuousLSWhenMottDelta", this);
-  fDisableLSCmd->SetGuidance("Variant C: when Mott delta-electron production is enabled, suppress continuous LS along-step correction in the current-charge domain.");
+  fDisableLSCmd->SetGuidance("Suppress the full continuous Lindhard-Sorensen correction in the current-charge domain when Mott delta-electron production is active and Mott data are available.");
   fDisableLSCmd->SetParameterName("disable", false);
   fDisableLSCmd->SetDefaultValue(true);
   fDisableLSCmd->AvailableForStates(G4State_PreInit, G4State_Idle);

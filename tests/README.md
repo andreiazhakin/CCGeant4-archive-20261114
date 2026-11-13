@@ -23,4 +23,4 @@ The fixture covers 11 energies, four numbers of bound electrons and four energy 
 
 ## Event transport and additional probes
 
-The [Cu/Xe/U example](../examples/minimal/README.md) includes expected numerical output and a portable event and primary energy-balance check. The other C++ targets exercise charge-state table coverage, isotope scaling, electron angles, trackless calls, and range cuts. The independent converter checks for zero transition rates and partial spectral moments are in `converters/dirac/`.
+The [Cu/Xe/U example](../examples/minimal/README.md) includes expected numerical output and a portable event and primary energy-balance check. The other C++ targets exercise charge-state table coverage, isotope scaling, trackless calls, and range cuts. The independent converter checks for zero transition rates and partial spectral moments are in `converters/dirac/`.
